@@ -24,7 +24,6 @@ jobs:
           relative_project_path: "./"
           archive_output: false
           use_preset_export_path: true
-          actions_pre_export_godot_command: "--headless --editor --quit"
 
       - name: Deploy to GitHub Pages
         uses: Peaceiris/actions-gh-pages@v3
