@@ -3,7 +3,7 @@ name: "Godot HTML5 Export & Deploy"
 on:
   push:
     branches:
-      - main # Falls dein Branch "master" heißt, bitte hier anpassen!
+      - main
 
 permissions:
   contents: write
@@ -19,12 +19,12 @@ jobs:
       - name: Godot Export
         uses: firebelley/godot-export@v6.0.0
         with:
-          # GitHub-Mirrors anstelle von TuxFamily
           godot_executable_download_url: https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip
           godot_export_templates_download_url: https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_export_templates.tpz
           relative_project_path: "./"
-          use_preset_export_path: true
           archive_output: false
+          use_preset_export_path: true
+          actions_pre_export_godot_command: "--headless --editor --quit"
 
       - name: Deploy to GitHub Pages
         uses: Peaceiris/actions-gh-pages@v3
