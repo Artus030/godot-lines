@@ -3,7 +3,7 @@ name: "Godot HTML5 Export & Deploy"
 on:
   push:
     branches:
-      - main
+      - main # Passe dies an, falls dein Branch "master" heißt!
 
 permissions:
   contents: write
@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Godot Export
-        uses: primaryfe/godot-action@v1
+        uses: abarrientos/godot-export-action@v1
         with:
           godot_version: "4.2.2"
           export_type: "web"
