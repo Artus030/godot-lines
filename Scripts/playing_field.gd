@@ -27,6 +27,8 @@ func _ready():
 	game_board = GameBoard.new(COLUMNS, ROWS, TILE_SIZE)
 	leaderboard_manager = LeaderboardManager.new()
 	
+	get_tree().root.size_changed.connect(calculate_center_offset)
+	
 	ui_manager.restart_requested.connect(_on_restart_button_pressed)
 	calculate_center_offset()
 	generate_next_colors(3)
@@ -36,16 +38,42 @@ func _ready():
 
 func calculate_center_offset():
 	var viewport_size = get_viewport_rect().size
+	
+	# Unskalierte Original-Größe des Grids in Pixeln (z.B. 10 * 50 = 500px)
 	var grid_pixel_width = COLUMNS * TILE_SIZE
 	var grid_pixel_height = ROWS * TILE_SIZE
 	
-	var offset_x = (viewport_size.x - grid_pixel_width) / 2.0
-	var offset_y = 100.0
+	# --- RESPONSIVE SKALIERUNG ---
+	var target_scale = 1.0
+	
+	if viewport_size.x < viewport_size.y:
+		# Hochformat (Handy): Nutze 92% der verfügbaren Bildschirmbreite
+		var target_width = viewport_size.x * 0.92
+		target_scale = target_width / grid_pixel_width
+	else:
+		# Querformat (Laptop/Desktop): Limitiere die Höhe, damit das Board nicht riesig wird
+		# Nutze maximal 65% der Bildschirmhöhe für das Spielfeld
+		var target_height = viewport_size.y * 0.65
+		target_scale = target_height / grid_pixel_height
+
+	# Skalierung auf dieses Node2D (Spielfeld) anwenden
+	scale = Vector2(target_scale, target_scale)
+
+	# --- PADDING & ZENTRIERUNG ---
+	# Durch scale verändert sich die visuelle Breite/Höhe des Grids:
+	var scaled_grid_width = grid_pixel_width * target_scale
+	
+	# X-Offset: Exakt mittig zentrieren
+	var offset_x = (viewport_size.x - scaled_grid_width) / 2.0 / target_scale
+	
+	# Y-Offset: Etwas Platz nach oben für die Vorschau/Score-UI lassen (z. B. 120px)
+	var offset_y = 120.0 / target_scale
 	
 	game_board.board_offset = Vector2(offset_x, offset_y)
 	
 	# Passenden Offset an den GridDrawer übergeben
-	$GridDrawer.setup(game_board.board_offset, COLUMNS, ROWS, TILE_SIZE)
+	if $GridDrawer:
+		$GridDrawer.setup(game_board.board_offset, COLUMNS, ROWS, TILE_SIZE)
 
 
 func generate_next_colors(count: int):
