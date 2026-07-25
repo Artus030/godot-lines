@@ -1,0 +1,31 @@
+name: "Godot 4 HTML5 Export & Deploy"
+
+on:
+  push:
+    branches:
+      - main # ODER "master" – passe es an deinen Branch-Namen an!
+
+permissions:
+  contents: write
+
+jobs:
+  export-and-deploy:
+    runs-on: ubuntu-latest
+    name: Export and Deploy Game
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Godot 4 Export
+        uses: firebelley/godot-export@v6.0.0
+        with:
+          godot_executable_download_url: https://downloads.tuxfamily.org/godotengine/4.2.2/Godot_v4.2.2-stable_linux.x86_64.zip
+          godot_export_templates_download_url: https://downloads.tuxfamily.org/godotengine/4.2.2/Godot_v4.2.2-stable_export_templates.tpz
+          relative_project_path: "./"
+          archive_output: false
+
+      - name: Deploy to GitHub Pages
+        uses: Peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
