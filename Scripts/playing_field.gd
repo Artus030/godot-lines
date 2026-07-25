@@ -30,48 +30,47 @@ func _ready():
 	get_tree().root.size_changed.connect(calculate_center_offset)
 	
 	ui_manager.restart_requested.connect(_on_restart_button_pressed)
-	calculate_center_offset()
+	call_deferred("calculate_center_offset")
 	generate_next_colors(3)
 	spawn_random_balls(5)
 	ui_manager.update_score(score)
 
 
 func calculate_center_offset():
-	var viewport_size = get_viewport_rect().size
+	# WICHTIG: Das sichtbare Rechteck des Fensters holen!
+	var visible_size = get_viewport().get_visible_rect().size
 	
-	# Unskalierte Original-Größe des Grids in Pixeln (z.B. 10 * 50 = 500px)
+	# Unskalierte Original-Größe des Grids (10 * 50 = 500px)
 	var grid_pixel_width = COLUMNS * TILE_SIZE
 	var grid_pixel_height = ROWS * TILE_SIZE
 	
-	# --- RESPONSIVE SKALIERUNG ---
 	var target_scale = 1.0
 	
-	if viewport_size.x < viewport_size.y:
-		# Hochformat (Handy): Nutze 92% der verfügbaren Bildschirmbreite
-		var target_width = viewport_size.x * 0.92
+	if visible_size.x < visible_size.y:
+		# Hochformat (Handy): Nutze 92% der echten Displaybreite
+		var target_width = visible_size.x * 0.92
 		target_scale = target_width / grid_pixel_width
 	else:
-		# Querformat (Laptop/Desktop): Limitiere die Höhe, damit das Board nicht riesig wird
-		# Nutze maximal 65% der Bildschirmhöhe für das Spielfeld
-		var target_height = viewport_size.y * 0.65
+		# Querformat (Laptop/Desktop): Nutze max. 70% der Displayhöhe
+		var target_height = visible_size.y * 0.70
 		target_scale = target_height / grid_pixel_height
 
-	# Skalierung auf dieses Node2D (Spielfeld) anwenden
+	# Skalierung auf dieses Node (PlayingField) anwenden
 	scale = Vector2(target_scale, target_scale)
 
-	# --- PADDING & ZENTRIERUNG ---
-	# Durch scale verändert sich die visuelle Breite/Höhe des Grids:
+	# --- Spielfeld exakt zentrieren ---
+	# Das komplette Node2D wird auf dem Bildschirm verschoben
 	var scaled_grid_width = grid_pixel_width * target_scale
 	
-	# X-Offset: Exakt mittig zentrieren
-	var offset_x = (viewport_size.x - scaled_grid_width) / 2.0 / target_scale
+	# X-Zentrierung für das gesamte Spielfeld
+	position.x = (visible_size.x - scaled_grid_width) / 2.0
 	
-	# Y-Offset: Etwas Platz nach oben für die Vorschau/Score-UI lassen (z. B. 120px)
-	var offset_y = 120.0 / target_scale
+	# Y-Position (unterhalb der UI ansetzen, z. B. 120px Abstand)
+	position.y = 120.0
 	
-	game_board.board_offset = Vector2(offset_x, offset_y)
+	# Das intern gezeichnete Grid startet jetzt einfach bei (0,0) im lokalen Raum
+	game_board.board_offset = Vector2.ZERO
 	
-	# Passenden Offset an den GridDrawer übergeben
 	if $GridDrawer:
 		$GridDrawer.setup(game_board.board_offset, COLUMNS, ROWS, TILE_SIZE)
 

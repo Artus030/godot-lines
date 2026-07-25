@@ -15,7 +15,15 @@ signal restart_requested
 
 var current_score: int = 0
 var main_leaderboard_ref: LeaderboardManager
-	
+
+func _ready() -> void:
+	name_input_field.focus_entered.connect(_on_name_input_field_focus_entered)
+
+func _on_name_input_field_focus_entered():
+	# Sobald der Spieler auf das Feld tippt/klickt, Tastatur öffnen
+	if OS.has_feature("web") or OS.has_feature("mobile"):
+		DisplayServer.virtual_keyboard_show(name_input_field.text)
+
 func update_score(score: int):
 	score_label.text = "Punkte: " + str(score)
 	score_label.pivot_offset = score_label.size / 2.0
@@ -53,6 +61,10 @@ func show_game_over(score: int, is_highscore: bool, current_leaderboard: Array):
 	if is_highscore:
 		name_input_field.show()
 		save_score_button.show()
+		name_input_field.grab_focus()
+		if OS.has_feature("web") or OS.has_feature("mobile"):
+			# Zwingt Godot im Web, die Tastatur aufzurufen
+			DisplayServer.virtual_keyboard_show(name_input_field.text)
 	else:
 		name_input_field.hide()
 		save_score_button.hide()
@@ -98,6 +110,9 @@ func _on_save_button_pressed():
 	main_scene.leaderboard_manager.add_entry(player_name, current_score)
 	
 	# UI aktualisieren
+	if OS.has_feature("web") or OS.has_feature("mobile"):
+		DisplayServer.virtual_keyboard_hide()
+		name_input_field.release_focus()
 	name_input_field.hide()
 	save_score_button.hide()
 	render_leaderboard(main_scene.leaderboard_manager.leaderboard_data)
