@@ -15,32 +15,24 @@ ball_scene = ExtResource("2_3id0a")
 [node name="UILayer" type="CanvasLayer" parent="." unique_id=1206326381]
 script = ExtResource("3_3id0a")
 
-[node name="TopLeftBox" type="MarginContainer" parent="UILayer" unique_id=1776329386]
-offset_right = 313.0
-offset_bottom = 43.0
-size_flags_horizontal = 0
-size_flags_vertical = 0
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
+[node name="HeaderContainer" type="MarginContainer" parent="UILayer" unique_id=581802653]
+offset_right = 81.0
+offset_bottom = 40.0
 
-[node name="ScoreLabel" type="Label" parent="UILayer/TopLeftBox" unique_id=115222476]
+[node name="HBoxContainer" type="HBoxContainer" parent="UILayer/HeaderContainer" unique_id=551772306]
+layout_mode = 2
+
+[node name="ScoreLabel" type="Label" parent="UILayer/HeaderContainer/HBoxContainer" unique_id=115222476]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_font_sizes/font_size = 16
 text = "Punkte: 0	"
 
-[node name="TopMiddleBox" type="MarginContainer" parent="UILayer" unique_id=65466617]
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -20.0
-offset_right = 20.0
-offset_bottom = 40.0
-grow_horizontal = 2
-theme_override_constants/margin_top = 20
+[node name="Spacer" type="Control" parent="UILayer/HeaderContainer/HBoxContainer" unique_id=1622517417]
+layout_mode = 2
+size_flags_horizontal = 3
 
-[node name="PreviewContainer" type="HBoxContainer" parent="UILayer/TopMiddleBox" unique_id=1850853666]
+[node name="PreviewContainer" type="HBoxContainer" parent="UILayer/HeaderContainer/HBoxContainer" unique_id=1850853666]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0

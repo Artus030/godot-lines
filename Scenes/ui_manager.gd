@@ -2,14 +2,15 @@
 class_name UIManager
 extends CanvasLayer
 
-@onready var score_label: Label = $TopLeftBox/ScoreLabel
-@onready var preview_container: HBoxContainer = $TopMiddleBox/PreviewContainer
+@onready var score_label: Label = $HeaderContainer/HBoxContainer/ScoreLabel
+@onready var preview_container: HBoxContainer = $HeaderContainer/HBoxContainer/PreviewContainer
 @onready var game_over_overlay: ColorRect = $GameOverOverlay
-@onready var restart_button: Button = $GameOverOverlay/CenterContainer/VBoxContainer/RestartButton
+@onready var restart_button: Button = $GameOverPanel/CenterContainer/VBoxContainer/RestartButton
 @onready var game_over_panel = $GameOverPanel
 @onready var name_input_field = $GameOverPanel/CenterContainer/VBoxContainer/NameLineEdit
 @onready var save_score_button = $GameOverPanel/CenterContainer/VBoxContainer/SaveButton
 @onready var leaderboard_grid = $GameOverPanel/CenterContainer/VBoxContainer/LeaderboardGrid
+@onready var header_container = $"HeaderContainer"
 
 signal restart_requested
 
@@ -31,7 +32,21 @@ func update_score(score: int):
 	var tween = create_tween()
 	tween.tween_property(score_label, "scale", Vector2(1.2, 1.2), 0.1)
 	tween.tween_property(score_label, "scale", Vector2(1.0, 1.0), 0.1)
+	
+func adjust_header(board_x: float, board_y: float, board_width: float, current_scale: float):
+	if not header_container:
+		return
 
+	# 1. Header exakt auf die unskalierte Breite des Boards einstellen
+	header_container.custom_minimum_size.x = board_width / current_scale
+	
+	# 2. Gleiche Skalierung wie das Spielfeld nutzen
+	header_container.scale = Vector2(current_scale, current_scale)
+	
+	# 3. Direkt über dem Spielfeld platzieren
+	header_container.position.x = board_x
+	header_container.position.y = board_y - (55.0 * current_scale)
+	
 func update_preview(next_colors: Array[Color], ball_scene: PackedScene):
 	for child in preview_container.get_children():
 		preview_container.remove_child(child)

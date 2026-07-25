@@ -23,56 +23,57 @@ var leaderboard_manager: LeaderboardManager = null
 
 
 func _ready():
-	# GameBoard sauber instanziieren
+	# GameBoard etc. instanziieren
 	game_board = GameBoard.new(COLUMNS, ROWS, TILE_SIZE)
 	leaderboard_manager = LeaderboardManager.new()
 	
+	ui_manager.restart_requested.connect(_on_restart_button_pressed)
 	get_tree().root.size_changed.connect(calculate_center_offset)
 	
-	ui_manager.restart_requested.connect(_on_restart_button_pressed)
-	call_deferred("calculate_center_offset")
 	generate_next_colors(3)
 	spawn_random_balls(5)
 	ui_manager.update_score(score)
 
+	# NEU: Ein ganz kurzer Delay (2 Frames warten),
+	# damit Firefox Mobile den Canvas & das WebGL-Context sicher initialisiert hat!
+	await get_tree().process_frame
+	await get_tree().process_frame
+	calculate_center_offset()
+
 
 func calculate_center_offset():
-	# WICHTIG: Das sichtbare Rechteck des Fensters holen!
 	var visible_size = get_viewport().get_visible_rect().size
 	
-	# Unskalierte Original-Größe des Grids (10 * 50 = 500px)
 	var grid_pixel_width = COLUMNS * TILE_SIZE
 	var grid_pixel_height = ROWS * TILE_SIZE
 	
 	var target_scale = 1.0
 	
 	if visible_size.x < visible_size.y:
-		# Hochformat (Handy): Nutze 92% der echten Displaybreite
+		# Hochformat (Handy)
 		var target_width = visible_size.x * 0.92
 		target_scale = target_width / grid_pixel_width
 	else:
-		# Querformat (Laptop/Desktop): Nutze max. 70% der Displayhöhe
+		# Querformat (Desktop)
 		var target_height = visible_size.y * 0.70
 		target_scale = target_height / grid_pixel_height
 
-	# Skalierung auf dieses Node (PlayingField) anwenden
 	scale = Vector2(target_scale, target_scale)
 
-	# --- Spielfeld exakt zentrieren ---
-	# Das komplette Node2D wird auf dem Bildschirm verschoben
 	var scaled_grid_width = grid_pixel_width * target_scale
 	
-	# X-Zentrierung für das gesamte Spielfeld
+	# Spielfeld zentrieren
 	position.x = (visible_size.x - scaled_grid_width) / 2.0
+	position.y = 120.0 * target_scale
 	
-	# Y-Position (unterhalb der UI ansetzen, z. B. 120px Abstand)
-	position.y = 120.0
-	
-	# Das intern gezeichnete Grid startet jetzt einfach bei (0,0) im lokalen Raum
 	game_board.board_offset = Vector2.ZERO
 	
 	if $GridDrawer:
 		$GridDrawer.setup(game_board.board_offset, COLUMNS, ROWS, TILE_SIZE)
+
+	# --- NEU: Header an das Board anpassen ---
+	if ui_manager and ui_manager.has_method("adjust_header"):
+		ui_manager.adjust_header(position.x, position.y, scaled_grid_width, target_scale)
 
 
 func generate_next_colors(count: int):
