@@ -26,6 +26,7 @@ func update_score(score: int):
 
 func update_preview(next_colors: Array[Color], ball_scene: PackedScene):
 	for child in preview_container.get_children():
+		preview_container.remove_child(child)
 		child.queue_free()
 	
 	var label = Label.new()
@@ -62,6 +63,7 @@ func show_game_over(score: int, is_highscore: bool, current_leaderboard: Array):
 func render_leaderboard(leaderboard_data: Array):
 	# Alte Einträge im Grid löschen
 	for child in leaderboard_grid.get_children():
+		leaderboard_grid.remove_child(child)
 		child.queue_free()
 
 	# Für jeden Eintrag 3 Spalten (Labels) anlegen
