@@ -25,6 +25,13 @@ jobs:
           use_preset_export_path: true
           archive_output: false
 
+      - name: Move Files to Root Export Dir
+        run: |
+          if [ -d "./build/web/Web" ]; then
+            mv ./build/web/Web/* ./build/web/
+            rm -rf ./build/web/Web
+          fi
+
       - name: Download coi-serviceworker
         run: |
           curl -sL https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/master/coi-serviceworker.js -o ./build/web/coi-serviceworker.js
