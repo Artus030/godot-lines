@@ -26,6 +26,10 @@ jobs:
           use_preset_export_path: false
           archive_output: false
 
+      - name: Download coi-serviceworker
+        run: |
+          curl -sK https://raw.githubusercontent.com/gzuidhof/coi-serviceworker/master/coi-serviceworker.js -o ./build/Web/coi-serviceworker.js
+
       - name: Deploy to GitHub Pages
         uses: Peaceiris/actions-gh-pages@v3
         with:
