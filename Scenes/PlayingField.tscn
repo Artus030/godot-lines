@@ -1,0 +1,99 @@
+[gd_scene format=3 uid="uid://ohmjwifyn2oi"]
+
+[ext_resource type="Script" uid="uid://c4bvqysfak4tf" path="res://Scripts/playing_field.gd" id="1_j6y12"]
+[ext_resource type="PackedScene" uid="uid://dt8lclieycf52" path="res://Scenes/Ball.tscn" id="2_3id0a"]
+[ext_resource type="Script" uid="uid://ky1d5lfdh4h8" path="res://Scenes/ui_manager.gd" id="3_3id0a"]
+[ext_resource type="Script" uid="uid://2oqar7n13uun" path="res://Scenes/grid_drawer.gd" id="4_hgcex"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hgcex"]
+bg_color = Color(0.16565639, 0.16565639, 0.16565648, 0.74509805)
+
+[node name="Node2D" type="Node2D" unique_id=948436143]
+script = ExtResource("1_j6y12")
+ball_scene = ExtResource("2_3id0a")
+
+[node name="UILayer" type="CanvasLayer" parent="." unique_id=1206326381]
+script = ExtResource("3_3id0a")
+
+[node name="TopLeftBox" type="MarginContainer" parent="UILayer" unique_id=1776329386]
+offset_right = 313.0
+offset_bottom = 43.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+
+[node name="ScoreLabel" type="Label" parent="UILayer/TopLeftBox" unique_id=115222476]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 16
+text = "Punkte: 0	"
+
+[node name="TopMiddleBox" type="MarginContainer" parent="UILayer" unique_id=65466617]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_right = 20.0
+offset_bottom = 40.0
+grow_horizontal = 2
+theme_override_constants/margin_top = 20
+
+[node name="PreviewContainer" type="HBoxContainer" parent="UILayer/TopMiddleBox" unique_id=1850853666]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 0
+
+[node name="GameOverPanel" type="Panel" parent="UILayer" unique_id=630600922]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hgcex")
+
+[node name="CenterContainer" type="CenterContainer" parent="UILayer/GameOverPanel" unique_id=381844510]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -182.5
+offset_top = -61.5
+offset_right = 182.5
+offset_bottom = 61.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UILayer/GameOverPanel/CenterContainer" unique_id=815659254]
+layout_mode = 2
+
+[node name="GameOverLabel" type="Label" parent="UILayer/GameOverPanel/CenterContainer/VBoxContainer" unique_id=59375874]
+layout_mode = 2
+theme_override_font_sizes/font_size = 64
+text = "Game Over!"
+
+[node name="NameLineEdit" type="LineEdit" parent="UILayer/GameOverPanel/CenterContainer/VBoxContainer" unique_id=1077623626]
+layout_mode = 2
+placeholder_text = "Gib deinen Namen ein"
+
+[node name="SaveButton" type="Button" parent="UILayer/GameOverPanel/CenterContainer/VBoxContainer" unique_id=1974935053]
+layout_mode = 2
+text = "Eintrag speichern"
+
+[node name="LeaderboardGrid" type="GridContainer" parent="UILayer/GameOverPanel/CenterContainer/VBoxContainer" unique_id=249231347]
+layout_mode = 2
+columns = 3
+
+[node name="RestartButton" type="Button" parent="UILayer/GameOverPanel/CenterContainer/VBoxContainer" unique_id=1294006202]
+layout_mode = 2
+text = "Nochmal spielen"
+
+[node name="GridDrawer" type="Node2D" parent="." unique_id=1753509626]
+script = ExtResource("4_hgcex")
+
+[connection signal="pressed" from="UILayer/GameOverPanel/CenterContainer/VBoxContainer/SaveButton" to="UILayer" method="_on_save_button_pressed"]
+[connection signal="pressed" from="UILayer/GameOverPanel/CenterContainer/VBoxContainer/RestartButton" to="UILayer" method="_on_restart_button_pressed"]
