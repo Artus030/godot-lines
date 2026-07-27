@@ -45,3 +45,37 @@ func pixel_to_grid(local_mouse_pos: Vector2) -> Vector2i:
 	if x >= 0 and x < columns and y >= 0 and y < rows:
 		return Vector2i(x, y)
 	return Vector2i(-1, -1)
+
+
+func serialize_grid() -> Array:
+	var data: Array = []
+	for x in range(columns):
+		var column_data: Array = []
+		for y in range(rows):
+			var tile = grid[x][y]
+			if tile == null:
+				column_data.append(null)
+			else:
+				# Hier speichern wir die relevanten Eigenschaften des Balls (z.B. Farbe/Typ)
+				column_data.append({
+					"color": tile.color.to_html() # Passe dies an den Variablennamen deines Balls an
+				})
+		data.append(column_data)
+	return data
+
+
+## Gibt ein Array von Positionen und Ball-Eigenschaften zurück, 
+## damit dein Main-Script die Ball-Nodes wieder instanziieren kann.
+func get_saved_balls_from_data(saved_grid: Array) -> Array[Dictionary]:
+	var balls_to_spawn: Array[Dictionary] = []
+	
+	for x in range(saved_grid.size()):
+		for y in range(saved_grid[x].size()):
+			var cell_data = saved_grid[x][y]
+			if cell_data != null:
+				balls_to_spawn.append({
+					"grid_pos": Vector2i(x, y),
+					"color": cell_data["color"]
+				})
+				
+	return balls_to_spawn
