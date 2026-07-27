@@ -51,23 +51,23 @@ static func animate_removal(balls: Array[Ball]) -> void:
 	if balls.is_empty():
 		return
 		
-	var tween = balls[0].create_tween().set_parallel(true)
-	
 	for ball in balls:
-		# --- Partikel erzeugen ---
+		# --- Partikel erzeugen (CPUParticles2D für den Browser) ---
 		if particle_scene:
-			var particles = particle_scene.instantiate() as GPUParticles2D
-			# Position des Balls übernehmen
-			particles.position = ball.position
-			# Partikel in der Farbe des Balls einfärben!
-			particles.modulate = ball.color
-			# Partikel zum Spielfeld hinzufügen
-			ball.get_parent().add_child(particles)
+			var particles = particle_scene.instantiate() as CPUParticles2D
+			if particles:
+				particles.position = ball.position
+				particles.modulate = ball.color
+				ball.get_parent().add_child(particles)
 		
-		# --- Ball-Animation (Aufblähen + Zerplatzen) ---
-		var pop_tween = ball.create_tween().set_parallel(true)
+		var pop_tween = ball.create_tween()
+		
+		pop_tween.tween_property(ball, "scale", Vector2(1.2, 1.2), 0.06)\
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			
 		pop_tween.chain().tween_property(ball, "scale", Vector2.ZERO, 0.12)\
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-		pop_tween.parallel().tween_property(ball, "modulate:a", 0.0, 0.15)
+		pop_tween.parallel().tween_property(ball, "modulate:a", 0.0, 0.12)
+		
 
-	await tween.finished
+	await balls[0].get_tree().create_timer(0.18).timeout
