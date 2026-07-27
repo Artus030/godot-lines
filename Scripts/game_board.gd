@@ -1,4 +1,3 @@
-# scripts/game_board.gd
 class_name GameBoard
 
 var columns: int
@@ -56,16 +55,12 @@ func serialize_grid() -> Array:
 			if tile == null:
 				column_data.append(null)
 			else:
-				# Hier speichern wir die relevanten Eigenschaften des Balls (z.B. Farbe/Typ)
 				column_data.append({
-					"color": tile.color.to_html() # Passe dies an den Variablennamen deines Balls an
+					"color": tile.color.to_html() 
 				})
 		data.append(column_data)
 	return data
 
-
-## Gibt ein Array von Positionen und Ball-Eigenschaften zurück, 
-## damit dein Main-Script die Ball-Nodes wieder instanziieren kann.
 func get_saved_balls_from_data(saved_grid: Array) -> Array[Dictionary]:
 	var balls_to_spawn: Array[Dictionary] = []
 	

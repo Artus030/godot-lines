@@ -4,6 +4,8 @@ class_name Ball
 # Farbe der Kugel (wird vom GameBoard zugewiesen)
 var color: Color = Color.WHITE
 var grid_position: Vector2 = Vector2.ZERO  # Position im Grid (x, y)
+var selection_tween: Tween = null
+var base_position: Vector2 = Vector2.ZERO
 
 func _ready():
 	# Sprite2D die Farbe zuweisen

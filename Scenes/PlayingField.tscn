@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" uid="uid://c4bvqysfak4tf" path="res://Scripts/playing_field.gd" id="1_j6y12"]
 [ext_resource type="PackedScene" uid="uid://dt8lclieycf52" path="res://Scenes/Ball.tscn" id="2_3id0a"]
-[ext_resource type="Script" uid="uid://ky1d5lfdh4h8" path="res://Scenes/ui_manager.gd" id="3_3id0a"]
-[ext_resource type="Script" uid="uid://2oqar7n13uun" path="res://Scenes/grid_drawer.gd" id="4_hgcex"]
+[ext_resource type="Script" uid="uid://ky1d5lfdh4h8" path="res://Scripts/ui_manager.gd" id="3_3id0a"]
+[ext_resource type="Script" uid="uid://2oqar7n13uun" path="res://Scripts/grid_drawer.gd" id="4_hgcex"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hgcex"]
 bg_color = Color(0.16565639, 0.16565639, 0.16565648, 0.74509805)

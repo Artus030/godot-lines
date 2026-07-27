@@ -127,14 +127,25 @@ func deselect_ball():
 		selected_ball = null
 
 func move_ball_along_path(ball: Ball, path: Array[Vector2i]):
-	game_board.grid[ball.grid_position.x][ball.grid_position.y] = null
-	deselect_ball()
+	# 1. Hüpfen beenden, OHNE ihn zur alten Position zurückzuzwingen
+	if ball.selection_tween and ball.selection_tween.is_running():
+		ball.selection_tween.kill()
+		ball.selection_tween = null
 
+	# 2. Grid-Daten aktualisieren
+	game_board.grid[ball.grid_position.x][ball.grid_position.y] = null
 	var target_grid_pos = path[-1]
 	ball.grid_position = target_grid_pos
 	game_board.grid[target_grid_pos.x][target_grid_pos.y] = ball
 
+	# 3. Ball auf die Zielposition bewegen
 	await BoardAnimator.animate_path_movement(ball, path, game_board)
+	
+	# 4. WICHTIG: Die base_position auf den NEUEN Standort aktualisieren & Größe zurücksetzen!
+	ball.base_position = ball.position
+	ball.scale = Vector2(1.0, 1.0)
+	
+	selected_ball = null
 
 	var matched_balls = MatchChecker.find_matching_balls(game_board.grid, COLUMNS, ROWS)
 	if matched_balls.size() > 0:
@@ -147,7 +158,7 @@ func move_ball_along_path(ball: Ball, path: Array[Vector2i]):
 
 	if game_board.get_empty_cells().size() == 0:
 		trigger_game_over()
-	elif not is_game_over:
+	else:
 		save_current_game()
 
 func remove_matched_balls(balls: Array[Ball]):
