@@ -21,6 +21,8 @@ func _ready():
 	game_board = GameBoard.new(COLUMNS, ROWS, TILE_SIZE)
 	spawner = SpawnerComponent.new()
 	leaderboard_manager = LeaderboardManager.new()
+	add_child(leaderboard_manager)
+	leaderboard_manager.load_leaderboard()
 	
 	ui_manager.restart_requested.connect(_on_restart_button_pressed)
 	get_tree().root.size_changed.connect(calculate_center_offset)

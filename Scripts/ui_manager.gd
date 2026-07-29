@@ -17,13 +17,19 @@ signal restart_requested
 var current_score: int = 0
 var main_leaderboard_ref: LeaderboardManager
 
+
 func _ready() -> void:
 	name_input_field.focus_entered.connect(_on_name_input_field_focus_entered)
+	
+	# Falls der Save-Button noch nicht über den Godot-Editor verbunden ist:
+	if not save_score_button.pressed.is_connected(_on_save_button_pressed):
+		save_score_button.pressed.connect(_on_save_button_pressed)
+
 
 func _on_name_input_field_focus_entered():
-	# Sobald der Spieler auf das Feld tippt/klickt, Tastatur öffnen
 	if OS.has_feature("web") or OS.has_feature("mobile"):
 		DisplayServer.virtual_keyboard_show(name_input_field.text)
+
 
 func update_score(score: int):
 	score_label.text = "Punkte: " + str(score)
@@ -32,21 +38,18 @@ func update_score(score: int):
 	var tween = create_tween()
 	tween.tween_property(score_label, "scale", Vector2(1.2, 1.2), 0.1)
 	tween.tween_property(score_label, "scale", Vector2(1.0, 1.0), 0.1)
-	
+
+
 func adjust_header(board_x: float, board_y: float, board_width: float, current_scale: float):
 	if not header_container:
 		return
 
-	# 1. Header exakt auf die unskalierte Breite des Boards einstellen
 	header_container.custom_minimum_size.x = board_width / current_scale
-	
-	# 2. Gleiche Skalierung wie das Spielfeld nutzen
 	header_container.scale = Vector2(current_scale, current_scale)
-	
-	# 3. Direkt über dem Spielfeld platzieren
 	header_container.position.x = board_x
 	header_container.position.y = board_y - (55.0 * current_scale)
-	
+
+
 func update_preview(next_colors: Array[Color], ball_scene: PackedScene):
 	for child in preview_container.get_children():
 		preview_container.remove_child(child)
@@ -68,17 +71,20 @@ func update_preview(next_colors: Array[Color], ball_scene: PackedScene):
 		wrapper.add_child(ball)
 		preview_container.add_child(wrapper)
 
+
+# --- GAME OVER & LEADERBOARD LOGIK ---
+
 func show_game_over(score: int, is_highscore: bool, current_leaderboard: Array):
 	current_score = score
 	game_over_panel.show()
 	
-	# Zeige die Namenseingabe NUR, wenn es ein Highscore ist
+	save_score_button.disabled = false
+	
 	if is_highscore:
 		name_input_field.show()
 		save_score_button.show()
 		name_input_field.grab_focus()
 		if OS.has_feature("web") or OS.has_feature("mobile"):
-			# Zwingt Godot im Web, die Tastatur aufzurufen
 			DisplayServer.virtual_keyboard_show(name_input_field.text)
 	else:
 		name_input_field.hide()
@@ -93,6 +99,13 @@ func render_leaderboard(leaderboard_data: Array):
 		leaderboard_grid.remove_child(child)
 		child.queue_free()
 
+	# Falls die Daten noch laden / leer sind
+	if leaderboard_data.size() == 0:
+		var loading_label = Label.new()
+		loading_label.text = "Lade Highscores..."
+		leaderboard_grid.add_child(loading_label)
+		return
+
 	# Für jeden Eintrag 3 Spalten (Labels) anlegen
 	for i in range(leaderboard_data.size()):
 		var entry = leaderboard_data[i]
@@ -105,7 +118,6 @@ func render_leaderboard(leaderboard_data: Array):
 		# 2. Spalte: Name
 		var name_label = Label.new()
 		name_label.text = entry["name"]
-		# Dehnt die Namensspalte aus, damit Punkte ganz rechts stehen
 		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL 
 		leaderboard_grid.add_child(name_label)
 		
@@ -116,21 +128,34 @@ func render_leaderboard(leaderboard_data: Array):
 		leaderboard_grid.add_child(score_label)
 
 
-# Das Signal vom "Speichern"-Button verbinden:
 func _on_save_button_pressed():
 	var player_name = name_input_field.text
+	var main_scene = get_parent()
+	var leaderboard = main_scene.leaderboard_manager
 	
-	# Zugriff auf das Leaderboard über das Hauptskript
-	var main_scene = get_parent() # Oder wie deine Hauptszene erreichbar ist
-	main_scene.leaderboard_manager.add_entry(player_name, current_score)
+	# UI kurz "sperren" während gesendet wird
+	save_score_button.disabled = true
 	
-	# UI aktualisieren
+	# Tastatur schließen & Eingabefeld verstecken
 	if OS.has_feature("web") or OS.has_feature("mobile"):
 		DisplayServer.virtual_keyboard_hide()
 		name_input_field.release_focus()
 	name_input_field.hide()
 	save_score_button.hide()
-	render_leaderboard(main_scene.leaderboard_manager.leaderboard_data)
+	
+	# Ladeanzeige im Grid schalten
+	render_leaderboard([])
+	
+	# Einmalige Verbindung herstellen, wenn die Daten von Supabase zurück sind:
+	if not leaderboard.leaderboard_loaded.is_connected(_on_leaderboard_updated_after_save):
+		leaderboard.leaderboard_loaded.connect(_on_leaderboard_updated_after_save, CONNECT_ONE_SHOT)
+	
+	# An Supabase senden (lädt am Ende automatisch die neue Liste!)
+	leaderboard.add_entry(player_name, current_score)
+
+
+func _on_leaderboard_updated_after_save(new_data: Array):
+	render_leaderboard(new_data)
 
 
 func _on_restart_button_pressed() -> void:

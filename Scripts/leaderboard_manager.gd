@@ -1,48 +1,98 @@
 # scripts/leaderboard.gd
 class_name LeaderboardManager
+extends Node
 
-const SAVE_PATH = "user://leaderboard.cfg"
-const LOCAL_STORAGE_KEY = "lines_leaderboard_data"
+# Signale für deine UI, damit sie weiß, wenn Daten da sind
+signal leaderboard_loaded(entries: Array)
+signal score_submitted(success: bool)
+
+const SUPABASE_URL: String = "https://bstflxyqetppyzgqrznv.supabase.co"
+const PUBLISHABLE_KEY: String = "sb_publishable_uZs78vohlk9O21UugDP9Qw_POmPTLHY"
+const ENDPOINT_URL: String = SUPABASE_URL + "/rest/v1/highscores"
+
 const MAX_ENTRIES: int = 10
 
-# Speichert Einträge im Format: [{"name": "Alex", "score": 1200}, ...]
+# Speichert die aktuell geladenen Einträge: [{"name": "Alex", "score": 1200}, ...]
 var leaderboard_data: Array = []
 
 
-func _init():
-	load_leaderboard()
+# 1. HIGHSCORES VON SUPABASE LADEN
+func load_leaderboard() -> void:
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	http_request.request_completed.connect(_on_load_completed.bind(http_request))
 
+	var headers = [
+		"apikey: " + PUBLISHABLE_KEY,
+		"Authorization: Bearer " + PUBLISHABLE_KEY
+	]
 
-func load_leaderboard():
-	leaderboard_data = PersistenceManager.load_data(LOCAL_STORAGE_KEY, [])
-
-
-func save_leaderboard():
-	PersistenceManager.save_data(LOCAL_STORAGE_KEY, leaderboard_data)
+	# Wir holen Spalten: username (wird als 'name' gemappt) und score
+	var url = ENDPOINT_URL + "?select=name:username,score&order=score.desc&limit=" + str(MAX_ENTRIES)
+	var error = http_request.request(url, headers, HTTPClient.METHOD_GET)
 	
-	
-func is_high_score(score: int) -> bool:
-	if score <= 0:
-		return false
-	# Wenn noch Platz in den Top 10 ist, ist es ein Highscore
-	if leaderboard_data.size() < MAX_ENTRIES:
-		return true
-	# Sonst prüfen, ob der Score besser ist als der schlechteste in den Top 10
-	return score > leaderboard_data[-1]["score"]
+	if error != OK:
+		print("Fehler beim Erstellen der GET-Anfrage: ", error)
+		leaderboard_loaded.emit(leaderboard_data)
 
 
-func add_entry(player_name: String, score: int):
-	if player_name.strip_edges() == "":
-		player_name = "Spieler"
+func _on_load_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray, http_node: HTTPRequest) -> void:
+	http_node.queue_free()
 
-	leaderboard_data.append({
-		"name": player_name,
+	if response_code == 200:
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) == OK:
+			leaderboard_data = json.get_data()
+			leaderboard_loaded.emit(leaderboard_data)
+			return
+
+	print("Fehler beim Laden von Supabase (Code %d)" % response_code)
+	leaderboard_loaded.emit([])
+
+
+# 2. NEUEN HIGHSCORE AN SUPABASE SENDEN
+func add_entry(username: String, score: int) -> void:
+	if username.strip_edges() == "":
+		username = "Spieler"
+
+	var http_request = HTTPRequest.new()
+	add_child(http_request)
+	http_request.request_completed.connect(_on_save_completed.bind(http_request))
+
+	var headers = [
+		"apikey: " + PUBLISHABLE_KEY,
+		"Authorization: Bearer " + PUBLISHABLE_KEY,
+		"Content-Type: application/json",
+		"Prefer: return=minimal"
+	]
+
+	var payload = JSON.stringify({
+		"username": username,
 		"score": score
 	})
 
-	leaderboard_data.sort_custom(func(a, b): return a["score"] > b["score"])
+	var error = http_request.request(ENDPOINT_URL, headers, HTTPClient.METHOD_POST, payload)
+	if error != OK:
+		print("Fehler beim Senden der POST-Anfrage: ", error)
+		score_submitted.emit(false)
 
-	if leaderboard_data.size() > MAX_ENTRIES:
-		leaderboard_data.resize(MAX_ENTRIES)
 
-	save_leaderboard()
+func _on_save_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray, http_node: HTTPRequest) -> void:
+	http_node.queue_free()
+
+	# 201 Created bedeutet: Erfolgreich bei Supabase gespeichert
+	if response_code == 201:
+		score_submitted.emit(true)
+		load_leaderboard() # Liste direkt neu von Supabase laden!
+	else:
+		print("Fehler beim Speichern (Code %d): %s" % [response_code, body.get_string_from_utf8()])
+		score_submitted.emit(false)
+
+
+# 3. HIGHSCORE PRÜFUNG (Nutzt die lokal abgelegten Supabase-Daten)
+func is_high_score(score: int) -> bool:
+	if score <= 0:
+		return false
+	if leaderboard_data.size() < MAX_ENTRIES:
+		return true
+	return score > leaderboard_data[-1]["score"]
