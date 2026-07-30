@@ -16,6 +16,10 @@ run/main_scene="res://Scenes/PlayingField.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[audio]
+
+driver/driver="Dummy"
+
 [autoload]
 
 SupabaseClient="*res://Scripts/autoload/supabase_client.gd"
