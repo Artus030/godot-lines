@@ -45,8 +45,14 @@ func pixel_to_grid(local_mouse_pos: Vector2) -> Vector2i:
 		return Vector2i(x, y)
 	return Vector2i(-1, -1)
 
-
-func serialize_grid() -> Array:
+func get_grid_data_for_save() -> Dictionary:
+	return {
+		"cols": columns,
+		"rows": rows,
+		"balls": get_grid_balls_array()
+	}
+	
+func get_grid_balls_array() -> Array:
 	var data: Array = []
 	for x in range(columns):
 		var column_data: Array = []

@@ -18,6 +18,17 @@ static func load_data(key: String, default_value: Variant = null) -> Variant:
 	return _cache.get(key, default_value)
 
 
+static func validate_board_data(grid_dict: Variant, current_cols: int, current_rows: int) -> Variant:
+	if grid_dict is Dictionary:
+		var saved_cols = grid_dict.get("cols", -1)
+		var saved_rows = grid_dict.get("rows", -1)
+		
+		if saved_cols == current_cols and saved_rows == current_rows:
+			return grid_dict
+			
+	return null
+
+
 static func erase_key(key: String) -> void:
 	_ensure_loaded()
 	if _cache.has(key):
@@ -28,24 +39,21 @@ static func erase_key(key: String) -> void:
 static func _ensure_loaded() -> void:
 	if _is_initialized:
 		return
-	
+		
 	_is_initialized = true
 	_cache = _read_from_disk()
 
 
 static func _read_from_disk() -> Dictionary:
-	var json_string: String = ""
+	if not FileAccess.file_exists(SAVE_PATH):
+		return {}
 
-	if OS.has_feature("web"):
-		var result = JavaScriptBridge.eval("localStorage.getItem('game_save_data');")
-		if result != null:
-			json_string = str(result)
-	else:
-		if FileAccess.file_exists(SAVE_PATH):
-			var file = FileAccess.open(SAVE_PATH, FileAccess.READ)
-			if file:
-				json_string = file.get_as_text()
-				file.close()
+	var file = FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if not file:
+		return {}
+
+	var json_string = file.get_as_text()
+	file.close()
 
 	if json_string.is_empty():
 		return {}
@@ -60,11 +68,7 @@ static func _read_from_disk() -> Dictionary:
 static func _write_to_disk() -> void:
 	var json_string = JSON.stringify(_cache)
 
-	if OS.has_feature("web"):
-		var safe_json = json_string.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
-		JavaScriptBridge.eval("localStorage.setItem('game_save_data', '%s');" % safe_json)
-	else:
-		var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-		if file:
-			file.store_string(json_string)
-			file.close()
+	var file = FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file:
+		file.store_string(json_string)
+		file.close()

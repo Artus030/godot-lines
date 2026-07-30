@@ -3,8 +3,8 @@ extends Node2D
 @export var ball_scene: PackedScene
 @onready var ui_manager = $UILayer
 
-const COLUMNS: int = 10
-const ROWS: int = 10
+const COLUMNS: int = 9
+const ROWS: int = 9
 const TILE_SIZE: int = 50
 const SAVE_KEY: String = "latest_game_state"
 
@@ -44,28 +44,38 @@ func save_current_game():
 	var hex_next_colors: Array[String] = []
 	for color in spawner.next_colors:
 		hex_next_colors.append(color.to_html())
+		
 	var save_dictionary = {
 		"score": score,
 		"next_colors": hex_next_colors,
-		"grid": game_board.serialize_grid()
+		"grid": game_board.get_grid_data_for_save()
 	}
+	
 	PersistenceManager.save_data(SAVE_KEY, save_dictionary)
 
-func load_or_start_new_game():
+func load_or_start_new_game() -> void:
 	var saved_state = PersistenceManager.load_data(SAVE_KEY, null)
+	
 	if saved_state != null and saved_state.has("grid"):
-		score = saved_state["score"]
-		spawner.next_colors = []
-		for hex_color in saved_state["next_colors"]:
-			spawner.next_colors.append(Color.html(hex_color))
+		var valid_grid_data = PersistenceManager.validate_board_data(saved_state["grid"], game_board.columns, game_board.rows)
 		
-		game_board.reset_grid()
-		for ball_info in game_board.get_saved_balls_from_data(saved_state["grid"]):
-			spawn_ball_at(ball_info["grid_pos"].x, ball_info["grid_pos"].y, Color.html(ball_info["color"]))
+		if valid_grid_data != null:
+			score = saved_state.get("score", 0)
+			ui_manager.update_score(score)
 			
-		ui_manager.update_preview(spawner.next_colors, ball_scene)
-	else:
-		start_new_game()
+			spawner.next_colors = []
+			for hex_color in saved_state.get("next_colors", []):
+				spawner.next_colors.append(Color.html(hex_color))
+			
+			game_board.reset_grid()
+			for ball_info in game_board.get_saved_balls_from_data(valid_grid_data["balls"]):
+				spawn_ball_at(ball_info["grid_pos"].x, ball_info["grid_pos"].y, Color.html(ball_info["color"]))
+				
+			ui_manager.update_preview(spawner.next_colors, ball_scene)
+			return
+
+	PersistenceManager.erase_key(SAVE_KEY)
+	start_new_game()
 
 
 # --- Spawning & Input ---
