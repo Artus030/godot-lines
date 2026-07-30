@@ -13,7 +13,11 @@ func _ready() -> void:
 		http_request = HTTPRequest.new()
 		http_request.name = "HTTPRequest"
 		add_child(http_request)
-	
+	http_request.accept_gzip = false
+
+	if not http_request.request_connected.is_connected(_on_request_completed) if http_request.has_signal("request_connected") else false:
+		pass
+
 	if not http_request.request_completed.is_connected(_on_request_completed):
 		http_request.request_completed.connect(_on_request_completed)
 
@@ -21,12 +25,12 @@ func _ready() -> void:
 func request(endpoint: String, method: HTTPClient.Method, data: Dictionary, callback: Callable) -> void:
 	current_callback = callback
 
+	# Da der Browser Accept-Encoding sowieso überschreibt, reichen die sauberen Standard-Header
 	var headers = [
 		"apikey: " + PUBLISHABLE_KEY,
 		"Authorization: Bearer " + PUBLISHABLE_KEY,
 		"Content-Type: application/json",
-		"Accept: application/json",
-		"Accept-Encoding: identity"
+		"Accept: application/json"
 	]
 	
 	var payload = JSON.stringify(data) if not data.is_empty() else ""
