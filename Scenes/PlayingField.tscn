@@ -87,5 +87,7 @@ text = "Nochmal spielen"
 [node name="GridDrawer" type="Node2D" parent="." unique_id=1753509626]
 script = ExtResource("4_hgcex")
 
+[node name="HTTPRequest" type="HTTPRequest" parent="." unique_id=246807878]
+
 [connection signal="pressed" from="UILayer/GameOverPanel/CenterContainer/VBoxContainer/SaveButton" to="UILayer" method="_on_save_button_pressed"]
 [connection signal="pressed" from="UILayer/GameOverPanel/CenterContainer/VBoxContainer/RestartButton" to="UILayer" method="_on_restart_button_pressed"]
