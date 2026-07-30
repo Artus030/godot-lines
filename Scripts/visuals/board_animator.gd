@@ -74,4 +74,6 @@ static func animate_removal(balls: Array[Ball]) -> void:
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 		pop_tween.parallel().tween_property(ball, "modulate:a", 0.0, 0.12)
 	
-	await Engine.get_main_loop().create_timer(0.18).timeout
+	var tree = Engine.get_main_loop() as SceneTree
+	if tree:
+		await tree.create_timer(0.18).timeout

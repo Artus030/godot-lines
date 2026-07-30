@@ -149,19 +149,19 @@ func move_ball_along_path(ball: Ball, path: Array[Vector2i]):
 	
 	ball.base_position = ball.position
 	ball.scale = Vector2(1.0, 1.0)
-	
 	selected_ball = null
 
 	var matched_balls = MatchChecker.find_matching_balls(game_board.grid, COLUMNS, ROWS)
 	if matched_balls.size() > 0:
 		await remove_matched_balls(matched_balls)
 	else:
-		spawn_random_balls(3)
-		var chain_matches = MatchChecker.find_matching_balls(game_board.grid, COLUMNS, ROWS)
-		if chain_matches.size() > 0:
-			await remove_matched_balls(chain_matches)
-	print(game_board.get_empty_cells())
-	if game_board.get_empty_cells().size() == 0:
+		if game_board.get_empty_cells().size() > 0:
+			spawn_random_balls(3)
+			var chain_matches = MatchChecker.find_matching_balls(game_board.grid, COLUMNS, ROWS)
+			if chain_matches.size() > 0:
+				await remove_matched_balls(chain_matches)
+
+	if game_board.get_empty_cells().is_empty():
 		trigger_game_over()
 	else:
 		save_current_game()
