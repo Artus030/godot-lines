@@ -160,7 +160,7 @@ func move_ball_along_path(ball: Ball, path: Array[Vector2i]):
 		var chain_matches = MatchChecker.find_matching_balls(game_board.grid, COLUMNS, ROWS)
 		if chain_matches.size() > 0:
 			await remove_matched_balls(chain_matches)
-
+	print(game_board.get_empty_cells())
 	if game_board.get_empty_cells().size() == 0:
 		trigger_game_over()
 	else:

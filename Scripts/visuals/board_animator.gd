@@ -40,15 +40,15 @@ static func animate_deselection(ball: Ball) -> void:
 	reset_tween.tween_property(ball, "scale", Vector2.ONE, 0.1)
 
 
-static func animate_path_movement(ball: Ball, path: Array[Vector2i], board: GameBoard) -> Signal:
+static func animate_path_movement(ball: Ball, path: Array[Vector2i], board: GameBoard) -> void:
 	if not is_instance_valid(ball) or path.is_empty():
-		return Signal()
+		return
 		
 	var tween = ball.create_tween()
 	for next_step in path:
 		tween.tween_property(ball, "position", board.grid_to_pixel(next_step), 0.08).set_trans(Tween.TRANS_LINEAR)
 		
-	return tween.finished
+	await tween.finished
 
 
 static func animate_removal(balls: Array[Ball]) -> void:
