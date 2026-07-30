@@ -14,7 +14,7 @@ signal restart_requested
 
 var current_score: int = 0
 
-func _ready() -> void:	
+func _ready() -> void:
 	if not save_score_button.pressed.is_connected(_on_save_button_pressed):
 		save_score_button.pressed.connect(_on_save_button_pressed)
 		
