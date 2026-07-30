@@ -41,8 +41,8 @@ func add_entry(username: String, score: int) -> void:
 
 
 func is_high_score(score: int) -> bool:
-	if score <= 0 or leaderboard_data.is_empty():
+	if score <= 0:
 		return false
-	if leaderboard_data.size() < MAX_ENTRIES:
+	if leaderboard_data.is_empty() or leaderboard_data.size() < MAX_ENTRIES:
 		return true
 	return score > leaderboard_data[-1].get("score", 0)

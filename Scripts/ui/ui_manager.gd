@@ -14,9 +14,7 @@ signal restart_requested
 
 var current_score: int = 0
 
-func _ready() -> void:
-	name_input_field.focus_entered.connect(_on_name_input_field_focus_entered)
-	
+func _ready() -> void:	
 	if not save_score_button.pressed.is_connected(_on_save_button_pressed):
 		save_score_button.pressed.connect(_on_save_button_pressed)
 		
@@ -25,11 +23,6 @@ func _ready() -> void:
 		
 	if LeaderboardManager:
 		LeaderboardManager.leaderboard_loaded.connect(render_leaderboard)
-
-
-func _on_name_input_field_focus_entered() -> void:
-	if OS.has_feature("web") or OS.has_feature("mobile"):
-		DisplayServer.virtual_keyboard_show(name_input_field.text)
 
 
 func update_score(score: int) -> void:
@@ -78,14 +71,15 @@ func update_preview(next_colors: Array[Color], ball_scene: PackedScene) -> void:
 func show_game_over(score: int, is_highscore: bool, current_leaderboard: Array) -> void:
 	current_score = score
 	game_over_panel.show()
+	
+	# Sicherstellen, dass das Panel ganz vorne gerendert wird
+	game_over_panel.move_to_front()
 	save_score_button.disabled = false
 	
 	if is_highscore:
 		name_input_field.show()
 		save_score_button.show()
 		name_input_field.grab_focus()
-		if OS.has_feature("web") or OS.has_feature("mobile"):
-			DisplayServer.virtual_keyboard_show(name_input_field.text)
 	else:
 		name_input_field.hide()
 		save_score_button.hide()
