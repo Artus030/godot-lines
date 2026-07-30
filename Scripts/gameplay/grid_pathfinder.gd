@@ -1,6 +1,5 @@
 class_name GridPathfinder
 
-# Findet einen Pfad über BFS
 static func find_path(start: Vector2i, target: Vector2i, grid: Array[Array], cols: int, rows: int) -> Array[Vector2i]:
 	var queue: Array[Vector2i] = [start]
 	var visited: Dictionary = {start: true}

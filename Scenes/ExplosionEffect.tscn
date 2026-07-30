@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://06p3mmo8fn0u"]
 
-[ext_resource type="Script" uid="uid://b8ojtfhac8rqm" path="res://Scripts/explosion_effect.gd" id="1_efrxf"]
+[ext_resource type="Script" uid="uid://b8ojtfhac8rqm" path="res://Scripts/visuals/explosion_effect.gd" id="1_efrxf"]
 
 [node name="ExplosionEffect" type="CPUParticles2D" unique_id=1522084130]
 emitting = false

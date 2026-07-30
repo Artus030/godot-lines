@@ -10,7 +10,6 @@ const SAVE_KEY: String = "latest_game_state"
 
 var game_board: GameBoard
 var spawner: SpawnerComponent
-var leaderboard_manager: LeaderboardManager
 
 var score: int = 0
 var is_game_over: bool = false
@@ -20,9 +19,7 @@ var selected_ball: Ball = null
 func _ready():
 	game_board = GameBoard.new(COLUMNS, ROWS, TILE_SIZE)
 	spawner = SpawnerComponent.new()
-	leaderboard_manager = LeaderboardManager.new()
-	add_child(leaderboard_manager)
-	leaderboard_manager.load_leaderboard()
+	LeaderboardManager.load_leaderboard()
 	
 	ui_manager.restart_requested.connect(_on_restart_button_pressed)
 	get_tree().root.size_changed.connect(calculate_center_offset)
@@ -129,21 +126,17 @@ func deselect_ball():
 		selected_ball = null
 
 func move_ball_along_path(ball: Ball, path: Array[Vector2i]):
-	# 1. Hüpfen beenden, OHNE ihn zur alten Position zurückzuzwingen
 	if ball.selection_tween and ball.selection_tween.is_running():
 		ball.selection_tween.kill()
 		ball.selection_tween = null
 
-	# 2. Grid-Daten aktualisieren
 	game_board.grid[ball.grid_position.x][ball.grid_position.y] = null
 	var target_grid_pos = path[-1]
 	ball.grid_position = target_grid_pos
 	game_board.grid[target_grid_pos.x][target_grid_pos.y] = ball
 
-	# 3. Ball auf die Zielposition bewegen
 	await BoardAnimator.animate_path_movement(ball, path, game_board)
 	
-	# 4. WICHTIG: Die base_position auf den NEUEN Standort aktualisieren & Größe zurücksetzen!
 	ball.base_position = ball.position
 	ball.scale = Vector2(1.0, 1.0)
 	
@@ -177,8 +170,8 @@ func remove_matched_balls(balls: Array[Ball]):
 func trigger_game_over():
 	is_game_over = true
 	PersistenceManager.erase_key(SAVE_KEY)
-	var qualifies = leaderboard_manager.is_high_score(score)
-	ui_manager.show_game_over(score, qualifies, leaderboard_manager.leaderboard_data)
+	var qualifies = LeaderboardManager.is_high_score(score)
+	ui_manager.show_game_over(score, qualifies, LeaderboardManager.leaderboard_data)
 
 func _on_restart_button_pressed():
 	get_tree().reload_current_scene()

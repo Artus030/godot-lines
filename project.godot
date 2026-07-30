@@ -16,6 +16,11 @@ run/main_scene="res://Scenes/PlayingField.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 
+[autoload]
+
+SupabaseClient="*uid://br2vkjmpvnqhx"
+LeaderboardManager="*uid://w322q6jrkjyi"
+
 [display]
 
 window/size/viewport_width=720

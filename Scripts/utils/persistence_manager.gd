@@ -1,38 +1,42 @@
 class_name PersistenceManager
-extends Node
+extends RefCounted
 
 const SAVE_PATH = "user://game_data.json"
 
-## Speichert ein beliebiges Dictionary oder Array unter einem bestimmten Key ab
+static var _cache: Dictionary = {}
+static var _is_initialized: bool = false
+
+
 static func save_data(key: String, value: Variant) -> void:
-	var current_data = _load_all_data()
-	current_data[key] = value
-	_write_all_data(current_data)
+	_ensure_loaded()
+	_cache[key] = value
+	_write_to_disk()
 
 
-## Lädt die Daten für einen Key. Gibt default_value zurück, falls der Key nicht existiert.
 static func load_data(key: String, default_value: Variant = null) -> Variant:
-	var current_data = _load_all_data()
-	if current_data.has(key):
-		return current_data[key]
-	return default_value
+	_ensure_loaded()
+	return _cache.get(key, default_value)
 
 
-## Löscht einen bestimmten Key aus dem Speicher
 static func erase_key(key: String) -> void:
-	var current_data = _load_all_data()
-	if current_data.has(key):
-		current_data.erase(key)
-		_write_all_data(current_data)
+	_ensure_loaded()
+	if _cache.has(key):
+		_cache.erase(key)
+		_write_to_disk()
 
 
-# --- Interne Hilfsfunktionen ---
+static func _ensure_loaded() -> void:
+	if _is_initialized:
+		return
+	
+	_is_initialized = true
+	_cache = _read_from_disk()
 
-static func _load_all_data() -> Dictionary:
+
+static func _read_from_disk() -> Dictionary:
 	var json_string: String = ""
 
 	if OS.has_feature("web"):
-		# In Web liest er alles aus einem zentralen App-Key
 		var result = JavaScriptBridge.eval("localStorage.getItem('game_save_data');")
 		if result != null:
 			json_string = str(result)
@@ -43,7 +47,7 @@ static func _load_all_data() -> Dictionary:
 				json_string = file.get_as_text()
 				file.close()
 
-	if json_string == "":
+	if json_string.is_empty():
 		return {}
 
 	var json = JSON.new()
@@ -53,11 +57,10 @@ static func _load_all_data() -> Dictionary:
 	return {}
 
 
-static func _write_all_data(data: Dictionary) -> void:
-	var json_string = JSON.stringify(data)
+static func _write_to_disk() -> void:
+	var json_string = JSON.stringify(_cache)
 
 	if OS.has_feature("web"):
-		# Sicheres Escaping für JavaScript-Strings (Backslashes und Anführungszeichen)
 		var safe_json = json_string.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n")
 		JavaScriptBridge.eval("localStorage.setItem('game_save_data', '%s');" % safe_json)
 	else:
