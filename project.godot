@@ -18,8 +18,8 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-SupabaseClient="*uid://br2vkjmpvnqhx"
-LeaderboardManager="*uid://w322q6jrkjyi"
+SupabaseClient="res://Scripts/autoload/supabase_client.gd"
+LeaderboardManager="res://Scripts/autoload/leaderboard_manager.gd"
 
 [display]
 
