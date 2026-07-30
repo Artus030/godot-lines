@@ -46,9 +46,13 @@ func request(endpoint: String, method: HTTPClient.Method, data: Dictionary, call
 
 
 # Der JS-Fetch läuft zu 100% stabil im Browser ohne Gzip-Crashes
+# Kugelsicherer Browser-Fetch mit dynamischem Polling
 func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary, callback: Callable) -> void:
 	var method_str = "GET" if method == HTTPClient.METHOD_GET else "POST"
 	var url = SUPABASE_URL + endpoint
+	
+	# Vor dem Request das globale JS-Objekt zurücksetzen
+	JavaScriptBridge.eval("window._supabase_response = null;")
 	
 	var js_code = """
 	(async function() {
@@ -77,19 +81,30 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	
 	JavaScriptBridge.eval(js_code)
 	
-	# Kurze Pause für das asynchrone JS-Ergebnis
-	await get_tree().create_timer(0.15).timeout
+	# Dynamisch warten, bis JS den Fetch beendet hat (maximal 5 Sekunden Timeout)
+	var time_spent := 0.0
+	var res = null
 	
-	var res = JavaScriptBridge.eval("window._supabase_response")
-	if res:
+	while time_spent < 5.0:
+		await get_tree().create_timer(0.05).timeout
+		time_spent += 0.05
+		res = JavaScriptBridge.eval("window._supabase_response")
+		if res != null:
+			break # JS hat geantwortet!
+
+	if res != null:
 		var code = int(res["code"])
 		var json = JSON.new()
 		var parse_res = json.parse(String(res["body"]))
 		var parsed_data = json.get_data() if parse_res == OK else null
 		
+		# PRINT ZUM DEBUGGEN: Zeigt genau, was Supabase antwortet!
+		print("WEB FETCH RESPONSE - Code: ", code, " | Data: ", parsed_data)
+		
 		if callback.is_valid():
 			callback.call(code, parsed_data)
 	else:
+		print("WEB FETCH TIMEOUT: Keines Ergebnis von JS erhalten.")
 		if callback.is_valid():
 			callback.call(0, null)
 
