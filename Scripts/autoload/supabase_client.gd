@@ -11,13 +11,14 @@ func request(endpoint: String, method: HTTPClient.Method, data: Dictionary, call
 		func(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
 			var parsed_json = _parse_body(body)
 			callback.call(response_code, parsed_json)
-			http_request.queue_free() # Verhindert Memory Leaks
+			http_request.queue_free()
 	)
 
 	var headers = [
 		"apikey: " + PUBLISHABLE_KEY,
 		"Authorization: Bearer " + PUBLISHABLE_KEY,
-		"Content-Type: application/json"
+		"Content-Type: application/json",
+		"Accept: application/json"
 	]
 	
 	var payload = JSON.stringify(data) if not data.is_empty() else ""
@@ -42,7 +43,23 @@ func post_db(endpoint: String, data: Dictionary, callback: Callable) -> void:
 func _parse_body(body: PackedByteArray) -> Variant:
 	if body.is_empty():
 		return null
+
+	var json_text: String = ""
+
+	if body.size() > 2 and body[0] == 0x1f and body[1] == 0x8b:
+		var decompressed = body.decompress_dynamic(-1, FileAccess.COMPRESSION_GZIP)
+		if decompressed.size() > 0:
+			json_text = decompressed.get_string_from_utf8()
+		else:
+			print("GZIP Decomp failed!")
+			return null
+	else:
+		json_text = body.get_string_from_utf8()
+
 	var json = JSON.new()
-	if json.parse(body.get_string_from_utf8()) == OK:
+	var error = json.parse(json_text)
+	if error == OK:
 		return json.get_data()
-	return null
+	else:
+		print("JSON Parse-Error: ", error, " Text was: ", json_text)
+		return null
