@@ -4,6 +4,7 @@ const SUPABASE_URL: String = "https://bstflxyqetppyzgqrznv.supabase.co"
 const PUBLISHABLE_KEY: String = "sb_publishable_uZs78vohlk9O21UugDP9Qw_POmPTLHY"
 
 func request(endpoint: String, method: HTTPClient.Method, data: Dictionary, callback: Callable) -> void:
+	print("--- REQUEST AUFGERUFEN --- Web-Feature aktiv? ", OS.has_feature("web"))
 	if OS.has_feature("web"):
 		_request_web(endpoint, method, data, callback)
 		return
