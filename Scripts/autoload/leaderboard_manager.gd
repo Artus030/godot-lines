@@ -14,16 +14,15 @@ func load_leaderboard() -> void:
 	var query = ENDPOINT_PATH + "?select=name:username,score&order=score.desc&limit=" + str(MAX_ENTRIES)
 	
 	SupabaseClient.get_db(query, func(code: int, data: Variant):
-		print("1. MANAGER CALLBACK: Code ", code, " | Daten: ", data)
-	
+		print("MANAGER ERHÄLT DATEN -> Code: ", code, " | Daten: ", data)
+		
 		if code == 200 and data is Array:
 			leaderboard_data = data
-			print("2. DATEN GESPEICHERT: ", leaderboard_data.size(), " Einträge")
+			print("LEADERBOARD UPDATED: ", leaderboard_data.size(), " Einträge geladen!")
 		else:
 			leaderboard_data = []
-			print("2. DATEN LEER ODER FEHLER")
-	
-		print("3. FEUERE SIGNAL: leaderboard_loaded")
+			print("LEADERBOARD FEHLER: Code war nicht 200 oder Data kein Array.")
+		
 		leaderboard_loaded.emit()
 	)
 

@@ -46,19 +46,22 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		JavaScriptBridge.get_interface("window").delete_property(cb_id)
 		
 		var status_code = int(args[0])
-		var raw_body = String(args[1])
+		var raw_body = String(args[1]) if args.size() > 1 and args[1] != null else ""
 		
-		print("WEB CALLBACK ERREICHT! Status: ", status_code)
+		print("WEB CALLBACK ERREICHT! Status: ", status_code, " | Raw Body: ", raw_body)
 		
 		if callback.is_valid():
 			var parsed_json = JSON.parse_string(raw_body)
+			
 			if parsed_json == null:
+				print("ACHTUNG: JSON.parse_string lieferte null! Raw Body war: '", raw_body, "'")
 				parsed_json = []
 			
+			print("Geparste Daten an Callback übergeben: ", parsed_json)
 			callback.call(status_code, parsed_json)
 	)
 	
-	# 2. Variablen sicher im JS-Window speichern (verhindert Escaping-Fehler!)
+	# 2. Variablen sicher im JS-Window speichern
 	var win = JavaScriptBridge.get_interface("window")
 	win[cb_id] = js_cb
 	win["_temp_url"] = url
@@ -67,7 +70,7 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	win["_temp_payload"] = payload_str
 	win["_temp_cb_name"] = cb_id
 
-	# 3. JavaScript ausführen (greift direkt auf die JS-Variablen zu)
+	# 3. JavaScript ausführen
 	var js_code = """
 	(async function() {
 		let url = window._temp_url;
@@ -76,7 +79,6 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		let payload = window._temp_payload;
 		let cbName = window._temp_cb_name;
 
-		// Aufräumen
 		delete window._temp_url;
 		delete window._temp_method;
 		delete window._temp_key;
