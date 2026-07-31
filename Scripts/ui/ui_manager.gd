@@ -25,6 +25,11 @@ func _ready() -> void:
 	# Lausche auf Daten-Updates aus dem LeaderboardManager
 	if LeaderboardManager and not LeaderboardManager.leaderboard_loaded.is_connected(render_leaderboard):
 		LeaderboardManager.leaderboard_loaded.connect(render_leaderboard)
+		print("Verbinde UIManager mit LeaderboardManager...")
+		if not LeaderboardManager.leaderboard_loaded.is_connected(render_leaderboard):
+			LeaderboardManager.leaderboard_loaded.connect(render_leaderboard)
+			print("Signal ERFOLGREICH verbunden!")
+		
 
 
 func update_score(score: int) -> void:
