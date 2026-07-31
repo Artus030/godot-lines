@@ -2,6 +2,7 @@ extends Node
 
 const SUPABASE_URL: String = "https://bstflxyqetppyzgqrznv.supabase.co"
 const PUBLISHABLE_KEY: String = "sb_publishable_uZs78vohlk9O21UugDP9Qw_POmPTLHY"
+var _active_callbacks: Array = []
 
 func request(endpoint: String, method: HTTPClient.Method, data: Dictionary, callback: Callable) -> void:
 	print("--- REQUEST AUFGERUFEN --- Web-Feature aktiv? ", OS.has_feature("web"))
@@ -41,9 +42,14 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	if not data.is_empty() and method != HTTPClient.METHOD_GET:
 		payload_str = JSON.stringify(data)
 
-	# 1. Das GDScript-Callback erstellen
-	var js_cb = JavaScriptBridge.create_callback(func(args):
+	# 1. Callback deklarieren
+	var js_cb: JavaScriptObject
+	
+	js_cb = JavaScriptBridge.create_callback(func(args):
 		JavaScriptBridge.get_interface("window").delete_property(cb_id)
+		
+		# Aus dem Array entfernen, damit der Speicher danach frei wird
+		_active_callbacks.erase(js_cb)
 		
 		var status_code = int(args[0])
 		var raw_body = String(args[1]) if args.size() > 1 and args[1] != null else ""
@@ -52,16 +58,16 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		
 		if callback.is_valid():
 			var parsed_json = JSON.parse_string(raw_body)
-			
 			if parsed_json == null:
-				print("ACHTUNG: JSON.parse_string lieferte null! Raw Body war: '", raw_body, "'")
 				parsed_json = []
 			
-			print("Geparste Daten an Callback übergeben: ", parsed_json)
 			callback.call(status_code, parsed_json)
 	)
 	
-	# 2. Variablen sicher im JS-Window speichern
+	# WICHTIG: Referenz im Array behalten, damit GC es nicht löscht!
+	_active_callbacks.append(js_cb)
+	
+	# 2. Variable an JS übergeben
 	var win = JavaScriptBridge.get_interface("window")
 	win[cb_id] = js_cb
 	win["_temp_url"] = url
@@ -70,7 +76,7 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	win["_temp_payload"] = payload_str
 	win["_temp_cb_name"] = cb_id
 
-	# 3. JavaScript ausführen
+	# 3. JS ausführen
 	var js_code = """
 	(async function() {
 		let url = window._temp_url;
