@@ -34,56 +34,52 @@ func request(endpoint: String, method: HTTPClient.Method, data: Dictionary, call
 func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary, callback: Callable) -> void:
 	var cb_id = "godot_cb_" + str(Time.get_ticks_usec())
 	var method_str = "GET" if method == HTTPClient.METHOD_GET else "POST"
+	var url = SUPABASE_URL + endpoint
+	var payload_json = JSON.stringify(data) if (not data.is_empty() and method != HTTPClient.METHOD_GET) else ""
 	
-	# Callback für Godot
-	var js_cb = JavaScriptBridge.create_callback(func(args):
+	# Callback erstellen
+	var js_cb: JavaScriptObject
+	js_cb = JavaScriptBridge.create_callback(func(args):
+		var status_code = int(args[0])
+		var raw_body = String(args[1])
+		
+		print("WEB RESPONSE -> Code: ", status_code, " | Body: ", raw_body)
+		
+		# JS-Referenz aufräumen
 		JavaScriptBridge.get_interface("window").delete_property(cb_id)
+		
 		if callback.is_valid():
-			var status_code = int(args[0])
-			var raw_body = String(args[1])
-			
-			# Debug-Print für die Browser-Konsole (F12)
-			print("WEB RESPONSE -> Code: ", status_code, " | Body: ", raw_body)
-			
 			var parsed_json = JSON.parse_string(raw_body)
 			callback.call(status_code, parsed_json)
 	)
 	
-	JavaScriptBridge.get_interface("window")[cb_id] = js_cb
+	# Global am window-Objekt verankern, damit JS darauf zugreifen kann
+	var win = JavaScriptBridge.get_interface("window")
+	win[cb_id] = js_cb
 
-	# Body NUR bei POST/PUT anhängen
-	var body_option = ""
-	if not data.is_empty() and method != HTTPClient.METHOD_GET:
-		body_option = "body: JSON.stringify(%s)," % JSON.stringify(data)
-
+	# Reines, sauberes JavaScript ohne heikle String-Formatierungen
 	var js_code = """
-	(async function() {
-		try {
-			let response = await fetch('%s', {
-				method: '%s',
-				headers: {
-					'apikey': '%s',
-					'Authorization': 'Bearer %s',
-					'Content-Type': 'application/json'
-				},
-				%s
-			});
-			let text = await response.text();
-			window['%s'](response.status, text);
-		} catch(e) {
-			console.error("Fetch Error:", e);
-			window['%s'](0, "");
+	(function(url, method, apiKey, payload, cbName) {
+		let options = {
+			method: method,
+			headers: {
+				'apikey': apiKey,
+				'Authorization': 'Bearer ' + apiKey,
+				'Content-Type': 'application/json'
+			}
+		};
+		if (payload && method !== 'GET') {
+			options.body = payload;
 		}
-	})();
-	""" % [
-		SUPABASE_URL + endpoint,
-		method_str,
-		PUBLISHABLE_KEY,
-		PUBLISHABLE_KEY,
-		body_option,
-		cb_id,
-		cb_id
-	]
+
+		fetch(url, options)
+			.then(response => response.text().then(text => window[cbName](response.status, text)))
+			.catch(err => {
+				console.error("Fetch Exception:", err);
+				window[cbName](0, "");
+			});
+	})('%s', '%s', '%s', '%s', '%s');
+	""" % [url, method_str, PUBLISHABLE_KEY, payload_json.replace("'", "\\'"), cb_id]
 
 	JavaScriptBridge.eval(js_code)
 
