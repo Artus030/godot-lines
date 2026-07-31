@@ -41,19 +41,18 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	if not data.is_empty() and method != HTTPClient.METHOD_GET:
 		payload_str = JSON.stringify(data)
 
-	# Das Callback, das aus JS aufgerufen wird
+	# Das Callback für Godot
 	var js_cb = JavaScriptBridge.create_callback(func(args):
 		JavaScriptBridge.get_interface("window").delete_property(cb_id)
 		
 		var status_code = int(args[0])
 		var raw_body = String(args[1])
 		
-		print("WEB CALLBACK ERREICHT! Code: ", status_code)
+		print("WEB CALLBACK ERREICHT! Status: ", status_code)
 		
 		if callback.is_valid():
 			var parsed_json = JSON.parse_string(raw_body)
 			if parsed_json == null and not raw_body.is_empty():
-				print("FEHLER beim JSON-Parsing in GDScript! Raw Body war: ", raw_body)
 				parsed_json = []
 			
 			callback.call(status_code, parsed_json)
@@ -61,8 +60,9 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	
 	JavaScriptBridge.get_interface("window")[cb_id] = js_cb
 
+	# Reines JS mit async/await (sauber & ohne Scoping-Fehler)
 	var js_code = """
-	(function() {
+	(async function() {
 		let url = '%s';
 		let method = '%s';
 		let apiKey = '%s';
@@ -82,20 +82,19 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 			options.body = payload;
 		}
 
-		fetch(url, options)
-			.then(response => response.text())
-			.then(text => {
-				console.log('[Godot-Fetch] Antwort erhalten, rufe GDScript Callback auf...');
-				if (window[cbName]) {
-					window[cbName](response.status, text);
-				}
-			})
-			.catch(err => {
-				console.error('[Godot-Fetch] Netzwerk-Fehler:', err);
-				if (window[cbName]) {
-					window[cbName](0, "[]");
-				}
-			});
+		try {
+			let response = await fetch(url, options);
+			let text = await response.text();
+			
+			if (window[cbName]) {
+				window[cbName](response.status, text);
+			}
+		} catch(err) {
+			console.error('[Godot-Fetch] Netzwerk-Fehler:', err);
+			if (window[cbName]) {
+				window[cbName](0, "[]");
+			}
+		}
 	})();
 	""" % [url, method_str, PUBLISHABLE_KEY, payload_str, cb_id]
 
