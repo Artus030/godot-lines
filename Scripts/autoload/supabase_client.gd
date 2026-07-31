@@ -35,31 +35,40 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	var cb_id = "godot_cb_" + str(Time.get_ticks_usec())
 	var method_str = "GET" if method == HTTPClient.METHOD_GET else "POST"
 	var url = SUPABASE_URL + endpoint
-	var payload_json = JSON.stringify(data) if (not data.is_empty() and method != HTTPClient.METHOD_GET) else ""
 	
-	# Callback erstellen
-	var js_cb: JavaScriptObject
-	js_cb = JavaScriptBridge.create_callback(func(args):
+	# Payload vorbereiten (NUR wenn Daten da sind und NICHT bei GET)
+	var payload_str = ""
+	if not data.is_empty() and method != HTTPClient.METHOD_GET:
+		payload_str = JSON.stringify(data)
+
+	# Callback für Godot
+	var js_cb = JavaScriptBridge.create_callback(func(args):
+		JavaScriptBridge.get_interface("window").delete_property(cb_id)
+		
 		var status_code = int(args[0])
 		var raw_body = String(args[1])
 		
 		print("WEB RESPONSE -> Code: ", status_code, " | Body: ", raw_body)
-		
-		# JS-Referenz aufräumen
-		JavaScriptBridge.get_interface("window").delete_property(cb_id)
 		
 		if callback.is_valid():
 			var parsed_json = JSON.parse_string(raw_body)
 			callback.call(status_code, parsed_json)
 	)
 	
-	# Global am window-Objekt verankern, damit JS darauf zugreifen kann
-	var win = JavaScriptBridge.get_interface("window")
-	win[cb_id] = js_cb
+	# Am Window-Objekt verankern
+	JavaScriptBridge.get_interface("window")[cb_id] = js_cb
 
-	# Reines, sauberes JavaScript ohne heikle String-Formatierungen
+	# Reines JS mit console.log für die F12-Konsole
 	var js_code = """
-	(function(url, method, apiKey, payload, cbName) {
+	(function() {
+		let url = '%s';
+		let method = '%s';
+		let apiKey = '%s';
+		let payload = '%s';
+		let cbName = '%s';
+
+		console.log('[Godot-Fetch] Starte Request an:', url);
+
 		let options = {
 			method: method,
 			headers: {
@@ -68,18 +77,22 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 				'Content-Type': 'application/json'
 			}
 		};
-		if (payload && method !== 'GET') {
+
+		if (payload.length > 0 && method !== 'GET') {
 			options.body = payload;
 		}
 
 		fetch(url, options)
-			.then(response => response.text().then(text => window[cbName](response.status, text)))
+			.then(response => response.text().then(text => {
+				console.log('[Godot-Fetch] Erfolgreich! Status:', response.status);
+				if (window[cbName]) window[cbName](response.status, text);
+			}))
 			.catch(err => {
-				console.error("Fetch Exception:", err);
-				window[cbName](0, "");
+				console.error('[Godot-Fetch] Fehler:', err);
+				if (window[cbName]) window[cbName](0, "");
 			});
-	})('%s', '%s', '%s', '%s', '%s');
-	""" % [url, method_str, PUBLISHABLE_KEY, payload_json.replace("'", "\\'"), cb_id]
+	})();
+	""" % [url, method_str, PUBLISHABLE_KEY, payload_str, cb_id]
 
 	JavaScriptBridge.eval(js_code)
 
