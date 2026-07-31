@@ -41,7 +41,7 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	if not data.is_empty() and method != HTTPClient.METHOD_GET:
 		payload_str = JSON.stringify(data)
 
-	# Das Callback für Godot
+	# 1. Das GDScript-Callback erstellen
 	var js_cb = JavaScriptBridge.create_callback(func(args):
 		JavaScriptBridge.get_interface("window").delete_property(cb_id)
 		
@@ -52,22 +52,36 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		
 		if callback.is_valid():
 			var parsed_json = JSON.parse_string(raw_body)
-			if parsed_json == null and not raw_body.is_empty():
+			if parsed_json == null:
 				parsed_json = []
 			
 			callback.call(status_code, parsed_json)
 	)
 	
-	JavaScriptBridge.get_interface("window")[cb_id] = js_cb
+	# 2. Variablen sicher im JS-Window speichern (verhindert Escaping-Fehler!)
+	var win = JavaScriptBridge.get_interface("window")
+	win[cb_id] = js_cb
+	win["_temp_url"] = url
+	win["_temp_method"] = method_str
+	win["_temp_key"] = PUBLISHABLE_KEY
+	win["_temp_payload"] = payload_str
+	win["_temp_cb_name"] = cb_id
 
-	# Reines JS mit async/await (sauber & ohne Scoping-Fehler)
+	# 3. JavaScript ausführen (greift direkt auf die JS-Variablen zu)
 	var js_code = """
 	(async function() {
-		let url = '%s';
-		let method = '%s';
-		let apiKey = '%s';
-		let payload = '%s';
-		let cbName = '%s';
+		let url = window._temp_url;
+		let method = window._temp_method;
+		let apiKey = window._temp_key;
+		let payload = window._temp_payload;
+		let cbName = window._temp_cb_name;
+
+		// Aufräumen
+		delete window._temp_url;
+		delete window._temp_method;
+		delete window._temp_key;
+		delete window._temp_payload;
+		delete window._temp_cb_name;
 
 		let options = {
 			method: method,
@@ -78,14 +92,16 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 			}
 		};
 
-		if (payload.length > 0 && method !== 'GET') {
+		if (payload && payload.length > 0 && method !== 'GET') {
 			options.body = payload;
 		}
 
 		try {
+			console.log("[Godot-Fetch] Sende Request an:", url);
 			let response = await fetch(url, options);
 			let text = await response.text();
 			
+			console.log("[Godot-Fetch] Antwort erhalten mit Status:", response.status);
 			if (window[cbName]) {
 				window[cbName](response.status, text);
 			}
@@ -96,7 +112,7 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 			}
 		}
 	})();
-	""" % [url, method_str, PUBLISHABLE_KEY, payload_str, cb_id]
+	"""
 
 	JavaScriptBridge.eval(js_code)
 
