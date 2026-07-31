@@ -14,18 +14,17 @@ func load_leaderboard() -> void:
 	var query = ENDPOINT_PATH + "?select=name:username,score&order=score.desc&limit=" + str(MAX_ENTRIES)
 	
 	SupabaseClient.get_db(query, func(code: int, data: Variant):
-		print("LEADERBOARD CALLBACK -> Code: ", code, " | Daten-Typ: ", typeof(data))
-		
+		print("1. MANAGER CALLBACK: Code ", code, " | Daten: ", data)
+	
 		if code == 200 and data is Array:
 			leaderboard_data = data
-			print("Daten erfolgreich gespeichert! Anzahl Einträge: ", leaderboard_data.size())
+			print("2. DATEN GESPEICHERT: ", leaderboard_data.size(), " Einträge")
 		else:
 			leaderboard_data = []
-			print("Fehler beim Verarbeiten der Daten!")
-		
-		# Das Signal abfeuern, damit das UI aufwacht
-		print("Feuere Signal: leaderboard_loaded")
-		leaderboard_loaded.emit() 
+			print("2. DATEN LEER ODER FEHLER")
+	
+		print("3. FEUERE SIGNAL: leaderboard_loaded")
+		leaderboard_loaded.emit()
 	)
 
 

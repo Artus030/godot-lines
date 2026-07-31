@@ -24,11 +24,14 @@ func _ready() -> void:
 		
 	# Lausche auf Daten-Updates aus dem LeaderboardManager
 	if LeaderboardManager:
+		# Signal verbinden
 		if not LeaderboardManager.leaderboard_loaded.is_connected(render_leaderboard):
 			LeaderboardManager.leaderboard_loaded.connect(render_leaderboard)
+			print("UI: Signal 'leaderboard_loaded' erfolgreich verbunden!")
 		
-		# FALLS Daten schon da sind (z.B. durch schnellen Fetch), direkt rendern!
+		# Senderschutz: Falls der Web-Fetch schneller war als das UI ready war!
 		if not LeaderboardManager.leaderboard_data.is_empty():
+			print("UI: Daten waren bereits geladen! Rendere direkt...")
 			render_leaderboard()
 		
 
@@ -97,20 +100,20 @@ func show_game_over(score: int, is_highscore: bool) -> void:
 ## Wird aufgerufen, wenn das Signal 'leaderboard_loaded' gefeuert wird 
 ## ODER wenn das UI manuell gerendert werden soll.
 func render_leaderboard() -> void:
+	print("UI: render_leaderboard() WIRD AUSGEFÜHRT!")
 	var data: Array = LeaderboardManager.leaderboard_data
-	# Falls data leer übergeben wurde, Fallback auf Cache nehmen
-	if data.is_empty() and LeaderboardManager:
-		data = LeaderboardManager.leaderboard_data
-		
+	
+	# Grid leeren
 	for child in leaderboard_grid.get_children():
 		child.queue_free()
 	
 	if data.is_empty():
 		var loading_label = Label.new()
-		loading_label.text = "Lade Highscores..."
+		loading_label.text = "Keine Highscores vorhanden."
 		leaderboard_grid.add_child(loading_label)
 		return
 
+	# Einträge rendern
 	for i in range(data.size()):
 		var entry = data[i]
 		if not entry is Dictionary:
