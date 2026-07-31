@@ -23,12 +23,13 @@ func _ready() -> void:
 		restart_button.pressed.connect(_on_restart_button_pressed)
 		
 	# Lausche auf Daten-Updates aus dem LeaderboardManager
-	if LeaderboardManager and not LeaderboardManager.leaderboard_loaded.is_connected(render_leaderboard):
-		LeaderboardManager.leaderboard_loaded.connect(render_leaderboard)
-		print("Verbinde UIManager mit LeaderboardManager...")
+	if LeaderboardManager:
 		if not LeaderboardManager.leaderboard_loaded.is_connected(render_leaderboard):
 			LeaderboardManager.leaderboard_loaded.connect(render_leaderboard)
-			print("Signal ERFOLGREICH verbunden!")
+		
+		# FALLS Daten schon da sind (z.B. durch schnellen Fetch), direkt rendern!
+		if not LeaderboardManager.leaderboard_data.is_empty():
+			render_leaderboard()
 		
 
 

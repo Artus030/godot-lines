@@ -37,29 +37,30 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	var method_str = "GET" if method == HTTPClient.METHOD_GET else "POST"
 	var url = SUPABASE_URL + endpoint
 	
-	# Payload vorbereiten (NUR wenn Daten da sind und NICHT bei GET)
 	var payload_str = ""
 	if not data.is_empty() and method != HTTPClient.METHOD_GET:
 		payload_str = JSON.stringify(data)
 
-	# Callback für Godot
+	# Das Callback, das aus JS aufgerufen wird
 	var js_cb = JavaScriptBridge.create_callback(func(args):
 		JavaScriptBridge.get_interface("window").delete_property(cb_id)
 		
 		var status_code = int(args[0])
 		var raw_body = String(args[1])
 		
-		print("WEB RESPONSE -> Code: ", status_code, " | Body: ", raw_body)
+		print("WEB CALLBACK ERREICHT! Code: ", status_code)
 		
 		if callback.is_valid():
 			var parsed_json = JSON.parse_string(raw_body)
+			if parsed_json == null and not raw_body.is_empty():
+				print("FEHLER beim JSON-Parsing in GDScript! Raw Body war: ", raw_body)
+				parsed_json = []
+			
 			callback.call(status_code, parsed_json)
 	)
 	
-	# Am Window-Objekt verankern
 	JavaScriptBridge.get_interface("window")[cb_id] = js_cb
 
-	# Reines JS mit console.log für die F12-Konsole
 	var js_code = """
 	(function() {
 		let url = '%s';
@@ -67,8 +68,6 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		let apiKey = '%s';
 		let payload = '%s';
 		let cbName = '%s';
-
-		console.log('[Godot-Fetch] Starte Request an:', url);
 
 		let options = {
 			method: method,
@@ -84,13 +83,18 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		}
 
 		fetch(url, options)
-			.then(response => response.text().then(text => {
-				console.log('[Godot-Fetch] Erfolgreich! Status:', response.status);
-				if (window[cbName]) window[cbName](response.status, text);
-			}))
+			.then(response => response.text())
+			.then(text => {
+				console.log('[Godot-Fetch] Antwort erhalten, rufe GDScript Callback auf...');
+				if (window[cbName]) {
+					window[cbName](response.status, text);
+				}
+			})
 			.catch(err => {
-				console.error('[Godot-Fetch] Fehler:', err);
-				if (window[cbName]) window[cbName](0, "");
+				console.error('[Godot-Fetch] Netzwerk-Fehler:', err);
+				if (window[cbName]) {
+					window[cbName](0, "[]");
+				}
 			});
 	})();
 	""" % [url, method_str, PUBLISHABLE_KEY, payload_str, cb_id]
