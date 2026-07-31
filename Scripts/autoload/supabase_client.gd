@@ -49,8 +49,12 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 	var method_str = "GET" if method == HTTPClient.METHOD_GET else "POST"
 	var url = SUPABASE_URL + endpoint
 	
-	# Callback erstellen, den JS aufrufen kann
-	var js_callback = JavaScriptBridge.create_callback(func(args):
+	# Eindeutigen Namen pro Request erzeugen, damit nichts überschrieben wird
+	var cb_id = "godot_cb_" + str(Time.get_ticks_usec())
+	
+	# Callback erstellen
+	var js_callback: JavaScriptObject
+	js_callback = JavaScriptBridge.create_callback(func(args):
 		var code = int(args[0])
 		var body_str = String(args[1])
 		
@@ -60,12 +64,20 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		
 		print("WEB FETCH RESPONSE - Code: ", code, " | Data: ", parsed_data)
 		
+		# Aufräumen in JS
+		JavaScriptBridge.get_interface("window").delete_property(cb_id)
+		
 		if callback.is_valid():
 			callback.call(code, parsed_data)
 	)
 	
-	# Einmalige globale JS-Funktion registrieren
-	JavaScriptBridge.get_interface("window")._godot_supabase_cb = js_callback
+	# Global am window-Objekt mit eindeutiger ID verankern
+	JavaScriptBridge.get_interface("window")[cb_id] = js_callback
+	
+	# Body korrekt als einfaches JSON serialisieren
+	var body_option = ""
+	if not data.is_empty() and method != HTTPClient.METHOD_GET:
+		body_option = ", body: " + JSON.stringify(data)
 	
 	var js_code = """
 	(async function() {
@@ -79,9 +91,10 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 				}%s
 			});
 			let text = await response.text();
-			window._godot_supabase_cb(response.status, text);
+			window['%s'](response.status, text);
 		} catch(e) {
-			window._godot_supabase_cb(0, "");
+			console.error("Fetch error:", e);
+			window['%s'](0, "");
 		}
 	})();
 	""" % [
@@ -89,7 +102,9 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		method_str, 
 		PUBLISHABLE_KEY, 
 		PUBLISHABLE_KEY,
-		", body: " + JSON.stringify(JSON.stringify(data)) if not data.is_empty() else ""
+		body_option,
+		cb_id,
+		cb_id
 	]
 	
 	JavaScriptBridge.eval(js_code)
