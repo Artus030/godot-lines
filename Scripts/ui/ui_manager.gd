@@ -90,7 +90,7 @@ func show_game_over(score: int, is_highscore: bool, current_leaderboard: Array) 
 func render_leaderboard(leaderboard_data: Array) -> void:
 	for child in leaderboard_grid.get_children():
 		child.queue_free()
-
+	print("Data in render: "+str(leaderboard_data))
 	if leaderboard_data.is_empty():
 		var loading_label = Label.new()
 		loading_label.text = "Lade Highscores..."

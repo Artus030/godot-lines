@@ -104,7 +104,7 @@ func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary,
 		if callback.is_valid():
 			callback.call(code, parsed_data)
 	else:
-		print("WEB FETCH TIMEOUT: Keines Ergebnis von JS erhalten.")
+		print("WEB FETCH TIMEOUT")
 		if callback.is_valid():
 			callback.call(0, null)
 
