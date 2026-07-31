@@ -3,135 +3,56 @@ extends Node
 const SUPABASE_URL: String = "https://bstflxyqetppyzgqrznv.supabase.co"
 const PUBLISHABLE_KEY: String = "sb_publishable_uZs78vohlk9O21UugDP9Qw_POmPTLHY"
 
-var http_request: HTTPRequest
-var current_callback: Callable
-
-func _ready() -> void:
-	if has_node("HTTPRequest"):
-		http_request = $HTTPRequest
-	else:
-		http_request = HTTPRequest.new()
-		http_request.name = "HTTPRequest"
-		add_child(http_request)
-	
-	if not http_request.request_completed.is_connected(_on_request_completed):
-		http_request.request_completed.connect(_on_request_completed)
-
-
 func request(endpoint: String, method: HTTPClient.Method, data: Dictionary, callback: Callable) -> void:
-	current_callback = callback
-
-	# IM BROWSER: Umgehe den StreamPeerGzip-Bug per JS-Fetch
 	if OS.has_feature("web"):
 		_request_web(endpoint, method, data, callback)
 		return
 
-	# AUF DESKTOP: Normaler HTTPRequest
+	var req = HTTPRequest.new()
+	add_child(req)
+	
+	req.request_completed.connect(func(_res, code, _headers, body):
+		if callback.is_valid():
+			callback.call(code, JSON.parse_string(body.get_string_from_utf8()))
+		req.queue_free()
+	)
+
 	var headers = [
 		"apikey: " + PUBLISHABLE_KEY,
 		"Authorization: Bearer " + PUBLISHABLE_KEY,
-		"Content-Type: application/json",
-		"Accept: application/json"
+		"Content-Type: application/json"
 	]
-	
-	var payload = JSON.stringify(data) if not data.is_empty() else ""
 	if method == HTTPClient.METHOD_POST:
 		headers.append("Prefer: return=minimal")
 
-	var error = http_request.request(SUPABASE_URL + endpoint, headers, method, payload)
-	if error != OK:
-		print("Network error on request: ", error)
-		if current_callback.is_valid():
-			current_callback.call(0, null)
+	var payload = JSON.stringify(data) if not data.is_empty() else ""
+	if req.request(SUPABASE_URL + endpoint, headers, method, payload) != OK:
+		if callback.is_valid(): callback.call(0, null)
+		req.queue_free()
 
 
 func _request_web(endpoint: String, method: HTTPClient.Method, data: Dictionary, callback: Callable) -> void:
-	var method_str = "GET" if method == HTTPClient.METHOD_GET else "POST"
-	var url = SUPABASE_URL + endpoint
-	
-	# Eindeutigen Namen pro Request erzeugen, damit nichts überschrieben wird
 	var cb_id = "godot_cb_" + str(Time.get_ticks_usec())
 	
-	# Callback erstellen
-	var js_callback: JavaScriptObject
-	js_callback = JavaScriptBridge.create_callback(func(args):
-		var code = int(args[0])
-		var body_str = String(args[1])
-		
-		var json = JSON.new()
-		var parse_res = json.parse(body_str)
-		var parsed_data = json.get_data() if parse_res == OK else null
-		
-		print("WEB FETCH RESPONSE - Code: ", code, " | Data: ", parsed_data)
-		
-		# Aufräumen in JS
+	# Callback erstellen & aufräumen
+	var js_cb = JavaScriptBridge.create_callback(func(args):
 		JavaScriptBridge.get_interface("window").delete_property(cb_id)
-		
 		if callback.is_valid():
-			callback.call(code, parsed_data)
+			callback.call(int(args[0]), JSON.parse_string(String(args[1])))
 	)
-	
-	# Global am window-Objekt mit eindeutiger ID verankern
-	JavaScriptBridge.get_interface("window")[cb_id] = js_callback
-	
-	# Body korrekt als einfaches JSON serialisieren
-	var body_option = ""
-	if not data.is_empty() and method != HTTPClient.METHOD_GET:
-		body_option = ", body: " + JSON.stringify(data)
-	
+	JavaScriptBridge.get_interface("window")[cb_id] = js_cb
+
+	# Kompakter JS-Fetch
+	var body_js = ", body: '%s'" % JSON.stringify(data) if not data.is_empty() and method != HTTPClient.METHOD_GET else ""
 	var js_code = """
-	(async function() {
-		try {
-			let response = await fetch('%s', {
-				method: '%s',
-				headers: {
-					'apikey': '%s',
-					'Authorization': 'Bearer %s',
-					'Content-Type': 'application/json'
-				}%s
-			});
-			let text = await response.text();
-			window['%s'](response.status, text);
-		} catch(e) {
-			console.error("Fetch error:", e);
-			window['%s'](0, "");
-		}
-	})();
-	""" % [
-		url, 
-		method_str, 
-		PUBLISHABLE_KEY, 
-		PUBLISHABLE_KEY,
-		body_option,
-		cb_id,
-		cb_id
-	]
-	
+	fetch('%s', { method: '%s', headers: {'apikey': '%s', 'Authorization': 'Bearer %s', 'Content-Type': 'application/json'} %s })
+		.then(r => r.text().then(t => window['%s'](r.status, t)))
+		.catch(e => window['%s'](0, ""));
+	""" % [SUPABASE_URL + endpoint, "GET" if method == HTTPClient.METHOD_GET else "POST", PUBLISHABLE_KEY, PUBLISHABLE_KEY, body_js, cb_id, cb_id]
+
 	JavaScriptBridge.eval(js_code)
 
 
-func _on_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
-	var parsed_json = _parse_body(body)
-	if current_callback.is_valid():
-		current_callback.call(response_code, parsed_json)
-
-
-func get_db(endpoint: String, callback: Callable) -> void:
-	request(endpoint, HTTPClient.METHOD_GET, {}, callback)
-
-func post_db(endpoint: String, data: Dictionary, callback: Callable) -> void:
-	request(endpoint, HTTPClient.METHOD_POST, data, callback)
-
-
-func _parse_body(body: PackedByteArray) -> Variant:
-	if body.is_empty():
-		return null
-	
-	var raw_text = body.get_string_from_utf8()
-	var json = JSON.new()
-	var err = json.parse(raw_text)
-	
-	if err == OK:
-		return json.get_data()
-	else:
-		return null
+# Helper
+func get_db(endpoint: String, callback: Callable) -> void: request(endpoint, HTTPClient.METHOD_GET, {}, callback)
+func post_db(endpoint: String, data: Dictionary, callback: Callable) -> void: request(endpoint, HTTPClient.METHOD_POST, data, callback)

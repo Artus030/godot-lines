@@ -19,10 +19,16 @@ var selected_ball: Ball = null
 func _ready():
 	game_board = GameBoard.new(COLUMNS, ROWS, TILE_SIZE)
 	spawner = SpawnerComponent.new()
-	LeaderboardManager.load_leaderboard()
-	print("Loaded data: "+str(LeaderboardManager.leaderboard_data))
 	
+	# --- Leaderboard Signale verbinden ---
+	LeaderboardManager.leaderboard_loaded.connect(_on_leaderboard_loaded)
+	LeaderboardManager.load_leaderboard() # Startet Laden im Hintergrund
+	
+	# --- UI Signale verbinden ---
 	ui_manager.restart_requested.connect(_on_restart_button_pressed)
+	if ui_manager.has_signal("score_submitted"):
+		ui_manager.score_submitted.connect(_on_score_submitted)
+		
 	get_tree().root.size_changed.connect(calculate_center_offset)
 	
 	load_or_start_new_game()
@@ -31,6 +37,17 @@ func _ready():
 	await get_tree().process_frame
 	await get_tree().process_frame
 	calculate_center_offset()
+
+
+# --- Leaderboard Callbacks ---
+
+func _on_leaderboard_loaded() -> void:
+	# Informiert den UI-Manager, sobald die Daten vom Netz geladen wurden
+	ui_manager.render_leaderboard()
+
+func _on_score_submitted(username: String) -> void:
+	# Wird vom UI-Manager aufgerufen, wenn der Spieler seinen Namen bestätigt hat
+	LeaderboardManager.add_entry(username, score)
 
 
 # --- Game Setup & State Management ---
@@ -182,7 +199,7 @@ func trigger_game_over():
 	is_game_over = true
 	PersistenceManager.erase_key(SAVE_KEY)
 	var qualifies = LeaderboardManager.is_high_score(score)
-	ui_manager.show_game_over(score, qualifies, LeaderboardManager.leaderboard_data)
+	ui_manager.show_game_over(score, qualifies)
 
 func _on_restart_button_pressed():
 	get_tree().reload_current_scene()

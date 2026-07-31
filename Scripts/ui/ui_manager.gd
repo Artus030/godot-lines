@@ -14,6 +14,7 @@ signal restart_requested
 
 var current_score: int = 0
 
+
 func _ready() -> void:
 	if not save_score_button.pressed.is_connected(_on_save_button_pressed):
 		save_score_button.pressed.connect(_on_save_button_pressed)
@@ -21,7 +22,8 @@ func _ready() -> void:
 	if not restart_button.pressed.is_connected(_on_restart_button_pressed):
 		restart_button.pressed.connect(_on_restart_button_pressed)
 		
-	if LeaderboardManager:
+	# Lausche auf Daten-Updates aus dem LeaderboardManager
+	if LeaderboardManager and not LeaderboardManager.leaderboard_loaded.is_connected(render_leaderboard):
 		LeaderboardManager.leaderboard_loaded.connect(render_leaderboard)
 
 
@@ -68,11 +70,9 @@ func update_preview(next_colors: Array[Color], ball_scene: PackedScene) -> void:
 
 # --- GAME OVER & LEADERBOARD LOGIC ---
 
-func show_game_over(score: int, is_highscore: bool, current_leaderboard: Array) -> void:
+func show_game_over(score: int, is_highscore: bool) -> void:
 	current_score = score
 	game_over_panel.show()
-	
-	# Sicherstellen, dass das Panel ganz vorne gerendert wird
 	game_over_panel.move_to_front()
 	save_score_button.disabled = false
 	
@@ -84,21 +84,29 @@ func show_game_over(score: int, is_highscore: bool, current_leaderboard: Array) 
 		name_input_field.hide()
 		save_score_button.hide()
 		
-	render_leaderboard(current_leaderboard)
+	# Zeige die Daten an, die aktuell im Cache liegen
+	render_leaderboard()
 
 
-func render_leaderboard(leaderboard_data: Array) -> void:
+## Wird aufgerufen, wenn das Signal 'leaderboard_loaded' gefeuert wird 
+## ODER wenn das UI manuell gerendert werden soll.
+func render_leaderboard() -> void:
+	var data: Array = LeaderboardManager.leaderboard_data
+	# Falls data leer übergeben wurde, Fallback auf Cache nehmen
+	if data.is_empty() and LeaderboardManager:
+		data = LeaderboardManager.leaderboard_data
+		
 	for child in leaderboard_grid.get_children():
 		child.queue_free()
-	print("Data in render: "+str(leaderboard_data))
-	if leaderboard_data.is_empty():
+	
+	if data.is_empty():
 		var loading_label = Label.new()
 		loading_label.text = "Lade Highscores..."
 		leaderboard_grid.add_child(loading_label)
 		return
 
-	for i in range(leaderboard_data.size()):
-		var entry = leaderboard_data[i]
+	for i in range(data.size()):
+		var entry = data[i]
 		if not entry is Dictionary:
 			continue
 			
@@ -131,8 +139,15 @@ func _on_save_button_pressed() -> void:
 	name_input_field.hide()
 	save_score_button.hide()
 	
-	render_leaderboard([])
+	# Zeige kurz ein "Lade..." im Leaderboard, während der Eintrag gespeichert wird
+	for child in leaderboard_grid.get_children():
+		child.queue_free()
+	var saving_label = Label.new()
+	saving_label.text = "Speichere..."
+	leaderboard_grid.add_child(saving_label)
 	
+	# Sendet den Score. Nach dem Speichern lädt der LeaderboardManager 
+	# automatisch neu und feuert 'leaderboard_loaded', was render_leaderboard() triggert!
 	LeaderboardManager.add_entry(player_name, current_score)
 
 
